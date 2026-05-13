@@ -24,19 +24,21 @@
     }
     input:focus { border-color: hsl(221,83%,53%); box-shadow: 0 0 0 2px hsl(221,83%,53%,0.15); }
     .tag-btn {
-      padding: 0.2rem 0.6rem; border-radius: 9999px; font-size: 0.7rem; font-weight: 600;
+      padding: 0.35rem 0.9rem; border-radius: 6px; font-size: 0.75rem; font-weight: 600;
       cursor: pointer; border: 2px solid transparent; transition: all 0.1s; white-space: nowrap;
+      opacity: 0.45;
     }
-    .tag-btn.active { border-color: currentColor; }
+    .tag-btn:hover { opacity: 0.75; }
+    .tag-btn.active { border-color: currentColor; opacity: 1; box-shadow: 0 0 0 2px currentColor; }
     .tag-ready    { background: #dcfce7; color: #15803d; }
     .tag-design   { background: #f3e8ff; color: #7e22ce; }
     .tag-regen    { background: #fef9c3; color: #a16207; }
     .tag-newinput { background: #dbeafe; color: #1d4ed8; }
     .tag-flagged  { background: #fee2e2; color: #b91c1c; }
-    .tag-empty    { background: #f1f5f9; color: #94a3b8; }
     .item-row { border-bottom: 1px solid #f1f5f9; }
     .item-row:last-child { border-bottom: none; }
-    .item-img { width: 80px; height: 60px; object-fit: cover; border-radius: 4px; border: 1px solid #e2e8f0; cursor: pointer; flex-shrink: 0; }
+    .item-row.answered { background: #f8fffe; }
+    .item-img { width: 72px; height: 54px; object-fit: cover; border-radius: 4px; border: 1px solid #e2e8f0; cursor: pointer; flex-shrink: 0; }
     .item-img:hover { opacity: 0.8; }
     .spinner { width: 1.25rem; height: 1.25rem; border: 2px solid #e2e8f0; border-top-color: hsl(221,83%,53%); border-radius: 50%; animation: spin 0.7s linear infinite; display: inline-block; }
     @keyframes spin { to { transform: rotate(360deg); } }
@@ -106,10 +108,10 @@
 
     <!-- SECTION: Master Key Editor -->
     <div class="bg-white border border-gray-200 rounded-lg">
-      <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+      <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100 sticky top-0 bg-white z-10 rounded-t-lg">
         <div>
           <h2 class="font-semibold text-gray-900">Master Answer Key</h2>
-          <p class="text-xs text-gray-500 mt-0.5">Click a tag to change the answer. Save when done.</p>
+          <p class="text-xs text-gray-500 mt-0.5">Click a tag to set the answer for each item. Save when done.</p>
         </div>
         <div class="flex items-center gap-3">
           <span id="master-status-chip" class="text-xs text-gray-400"></span>
@@ -182,7 +184,7 @@ const PASSPHRASE   = 'poiMaster';
 const SCRIPT_URL_KEY = 'ponto_script_url';
 const PONTO_API    = 'https://ponto-api-production-454568860704.us-west1.run.app';
 
-const STATUS_LABELS = { ready: 'Ready', design: 'Design', regenerate: 'Regen', newinput: 'New Input', flagged: 'Flag' };
+const STATUS_LABELS = { ready: 'Ready', design: 'Design Review', regenerate: 'Regenerate', newinput: 'New Input', flagged: 'Flag' };
 const STATUS_KEYS   = ['ready', 'design', 'regenerate', 'newinput', 'flagged'];
 const TAG_CLASS     = { ready: 'tag-ready', design: 'tag-design', regenerate: 'tag-regen', newinput: 'tag-newinput', flagged: 'tag-flagged' };
 
@@ -267,16 +269,17 @@ function renderMasterList() {
   itemsList.forEach(item => {
     const current = masterData[item.place_id]?.tag || '';
     const div = document.createElement('div');
-    div.className = 'item-row flex items-center gap-3 py-3 px-3';
+    div.id = 'row-' + item.place_id;
+    div.className = 'item-row' + (current ? ' answered' : '') + ' flex items-center gap-3 py-2.5 px-3';
     div.innerHTML = `
-      <span class="text-xs text-gray-400 w-5 flex-shrink-0 text-right">${item.index}</span>
+      <span class="text-xs text-gray-300 w-6 flex-shrink-0 text-right font-mono">${item.index}</span>
       <img class="item-img" src="${item.input_url}" title="Input" onclick="openLightbox('${item.input_url}')" onerror="this.style.display='none'" />
       <img class="item-img" src="${item.output_url}" title="Output" onclick="openLightbox('${item.output_url}')" onerror="this.style.display='none'" />
-      <div class="flex-1 min-w-0">
+      <div class="w-40 flex-shrink-0 min-w-0">
         <p class="text-xs font-medium text-gray-800 truncate">${item.name}</p>
         <p class="text-xs text-gray-400 truncate">${item.address}</p>
       </div>
-      <div class="flex gap-1.5 flex-wrap justify-end" id="tags-${item.place_id}">
+      <div class="flex gap-2 flex-1" id="tags-${item.place_id}">
         ${STATUS_KEYS.map(s => `
           <button class="tag-btn ${TAG_CLASS[s]} ${current === s ? 'active' : ''}"
             onclick="setTag('${item.place_id}', '${s}')">
@@ -292,13 +295,15 @@ function setTag(placeId, tag) {
   if (!masterData[placeId]) masterData[placeId] = { tag: '', comment: '' };
   masterData[placeId].tag = tag;
 
-  // Re-render just the tag buttons for this row
   const container = document.getElementById('tags-' + placeId);
   container.innerHTML = STATUS_KEYS.map(s => `
     <button class="tag-btn ${TAG_CLASS[s]} ${tag === s ? 'active' : ''}"
       onclick="setTag('${placeId}', '${s}')">
       ${STATUS_LABELS[s]}
     </button>`).join('');
+
+  const row = document.getElementById('row-' + placeId);
+  if (row) row.classList.toggle('answered', !!tag);
 
   const tagged = Object.values(masterData).filter(v => v.tag).length;
   document.getElementById('master-status-chip').textContent = `${tagged} / ${itemsList.length} tagged`;
