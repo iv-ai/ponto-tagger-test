@@ -78,10 +78,18 @@ What you'll see:
 
 ## Updating the 42 Test Items
 
-To swap in new place images:
-1. Find the place ID from the production tool (`ponto-ui-production-...`)
-2. Share the ID — the dev fetches both image URLs from the API and updates `index.html`
-3. Push to GitHub — live within ~30 seconds
+Images are stored **in the repo** (`images/` folder) so they never change even if the production platform reprocesses those places. This means every swap requires downloading the new images and committing them.
+
+To swap in a new place:
+1. Get the place ID from the production tool
+2. Share the ID with the dev — they will:
+   - Fetch both image URLs from the Ponto API
+   - Download `input_{id}.jpg` and `output_{id}_{timestamp}.jpg` into `images/`
+   - Update the `ITEMS` entry in `index.html` with `inputLink: "images/input_{id}.jpg"` and `outputLink: "images/output_{id}_{timestamp}.jpg"`
+   - Commit and push
+3. Live on GitHub Pages within ~30 seconds
+
+> **Important:** Never point `inputLink` / `outputLink` at a live GCS URL. Always download first, commit the file, and use the local `images/` path. This ensures the test stays frozen even when production changes.
 
 ---
 
@@ -93,5 +101,5 @@ To swap in new place images:
 | Submission fails silently | Check the Apps Script deployment is set to "Anyone" access |
 | Results viewer shows no data | Paste the Apps Script URL in the viewer and click Load Results |
 | Answer key missing (yellow warning) | Submit as `poiMaster` first |
-| Images not loading | GCS image URLs are public — check internet connection |
+| Images not loading | Images are served from GitHub Pages — check the `images/` folder in the repo has the files |
 | Need to re-deploy Apps Script after code change | Extensions → Apps Script → Deploy → Manage deployments → edit existing deployment (don't create new — URL will change) |
