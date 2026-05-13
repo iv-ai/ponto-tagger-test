@@ -2,6 +2,8 @@
 
 This file is for AI-assisted maintenance. Read it before making any changes to this repo.
 
+**Maintenance rule:** After completing any change to this repo, update this file (CLAUDE.md) to reflect what changed — architecture, constants, file structure, known gotchas, etc. Also update ADMIN.md and ADMIN.txt if the operational process changed. The goal is that this file always describes the current state of the repo, not a past state.
+
 ---
 
 ## What this repo is
