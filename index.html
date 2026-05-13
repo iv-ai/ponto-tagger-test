@@ -124,9 +124,15 @@
         <p>You can leave a comment on any item. Work through all 42 items, then submit.</p>
       </div>
       <div class="space-y-2">
-        <label class="block text-sm font-medium text-gray-700">Your name <span class="text-red-500">*</span></label>
+        <label class="block text-sm font-medium text-gray-700">Your full name <span class="text-red-500">*</span></label>
         <input type="text" id="tester-name-input" placeholder="e.g. Jane Smith" oninput="checkConfirmPhrase()" />
         <p id="name-error" class="text-xs text-red-500 hidden">Please enter your name before starting.</p>
+      </div>
+      <div class="space-y-2">
+        <label class="block text-sm font-medium text-gray-700">Your Gmail address <span class="text-red-500">*</span></label>
+        <p class="text-xs text-gray-500">The Gmail you'll use to access the tagger tool if selected.</p>
+        <input type="email" id="tester-email-input" placeholder="e.g. jane.smith@gmail.com" oninput="checkConfirmPhrase()" />
+        <p id="email-error" class="text-xs text-red-500 hidden">Please enter a valid Gmail address.</p>
       </div>
       <div class="space-y-2">
         <label class="block text-sm font-medium text-gray-700">
@@ -416,9 +422,11 @@ const CONFIRM_PHRASE = 'I have fully read the guidelines';
 let guidelineOpened = false;
 
 function checkConfirmPhrase() {
-  const val = document.getElementById('confirm-read-input').value;
-  const name = document.getElementById('tester-name-input').value.trim();
-  const ready = guidelineOpened && val === CONFIRM_PHRASE && name.length > 0;
+  const val   = document.getElementById('confirm-read-input').value;
+  const name  = document.getElementById('tester-name-input').value.trim();
+  const email = document.getElementById('tester-email-input').value.trim();
+  const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const ready = guidelineOpened && val === CONFIRM_PHRASE && name.length > 0 && emailOk;
   const btn = document.getElementById('start-btn');
   btn.disabled = !ready;
   btn.style.opacity = ready ? '1' : '0.4';
@@ -436,7 +444,8 @@ function shuffle(arr) {
 shuffle(ITEMS);
 
 // ─── STATE ──────────────────────────────────────────────────────────────────
-let testerName = '';
+let testerName  = '';
+let testerEmail = '';
 let currentIndex = 0;
 const answers = Array(ITEMS.length).fill(null).map(() => ({ status: null, comment: '' }));
 
@@ -447,7 +456,8 @@ function showScreen(name) {
 }
 
 function startTest() {
-  const nameInput = document.getElementById('tester-name-input').value.trim();
+  const nameInput  = document.getElementById('tester-name-input').value.trim();
+  const emailInput = document.getElementById('tester-email-input').value.trim();
   const confirmVal = document.getElementById('confirm-read-input').value;
   let valid = true;
 
@@ -458,6 +468,13 @@ function startTest() {
     document.getElementById('name-error').classList.add('hidden');
   }
 
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailInput)) {
+    document.getElementById('email-error').classList.remove('hidden');
+    valid = false;
+  } else {
+    document.getElementById('email-error').classList.add('hidden');
+  }
+
   if (!guidelineOpened || confirmVal !== CONFIRM_PHRASE) {
     document.getElementById('confirm-error').classList.remove('hidden');
     valid = false;
@@ -466,7 +483,8 @@ function startTest() {
   }
 
   if (!valid) return;
-  testerName = nameInput;
+  testerName  = nameInput;
+  testerEmail = emailInput;
   document.getElementById('tagger-name-display').textContent = testerName;
   buildDots();
   loadItem(0);
@@ -632,6 +650,7 @@ async function submitResults() {
 
   const payload = {
     tester_name: testerName,
+    tester_email: testerEmail,
     submitted_at: new Date().toISOString(),
     items: ITEMS.map((item, i) => ({
       index: i + 1,

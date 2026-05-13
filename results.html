@@ -400,6 +400,7 @@ function renderCandidateCards() {
             <span class="text-xs font-bold text-gray-400">#${rank + 1}</span>
             <p class="font-semibold text-gray-900">${sub.tester_name}</p>
           </div>
+          ${sub.tester_email ? `<p class="text-xs text-blue-500">${sub.tester_email}</p>` : ''}
           <p class="text-xs text-gray-400">${sub.submitted_at ? new Date(sub.submitted_at).toLocaleString() : ''}</p>
         </div>
         <div class="text-right flex-shrink-0">
@@ -473,7 +474,10 @@ function openDrawer(sub) {
   drawerSub = sub;
   const sc = score(sub);
   document.getElementById('drawer-name').textContent = sub.tester_name;
-  document.getElementById('drawer-meta').textContent = sub.submitted_at ? new Date(sub.submitted_at).toLocaleString() : '';
+  const metaParts = [];
+  if (sub.tester_email) metaParts.push(sub.tester_email);
+  if (sub.submitted_at) metaParts.push(new Date(sub.submitted_at).toLocaleString());
+  document.getElementById('drawer-meta').textContent = metaParts.join(' · ');
 
   if (sc) {
     const chip = document.getElementById('drawer-score-chip');

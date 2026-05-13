@@ -164,14 +164,14 @@ function getSubmissions(ss) {
       });
       i++;
     }
-    return { tester_name: obj.tester_name, submitted_at: obj.submitted_at, items };
+    return { tester_name: obj.tester_name, tester_email: obj.tester_email || '', submitted_at: obj.submitted_at, items };
   });
 }
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
 
 function buildHeaders(itemCount) {
-  const base = ['tester_name', 'submitted_at'];
+  const base = ['tester_name', 'tester_email', 'submitted_at'];
   const cols = [];
   for (let i = 1; i <= itemCount; i++) {
     cols.push(`item_${i}_place_id`, `item_${i}_place_name`, `item_${i}_address`,
@@ -181,7 +181,7 @@ function buildHeaders(itemCount) {
 }
 
 function buildRow(payload) {
-  const base = [payload.tester_name, payload.submitted_at];
+  const base = [payload.tester_name, payload.tester_email || '', payload.submitted_at];
   const cols = [];
   payload.items.forEach(item => {
     cols.push(item.place_id||'', item.place_name||'', item.address||'',
