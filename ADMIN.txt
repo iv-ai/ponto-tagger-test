@@ -1,0 +1,138 @@
+PONTO TAGGER TEST — ADMIN GUIDE
+================================
+
+
+--- EMAIL BLURB (copy-paste this to send to the candidate) ---
+
+Subject: Ponto QA Tagger Assessment
+
+Hi [Name],
+
+Thank you for your interest in joining the Ponto QA tagging team!
+
+As the next step, we'd like you to complete a short image review assessment. It should take around 30–60 minutes.
+
+Before you start, please read the guideline document carefully — the test will ask you to confirm you've read it before allowing you to begin.
+
+Test link:
+https://iv-ai.github.io/ponto-tagger-test/
+
+Instructions:
+- Open the link above
+- Read the guideline document linked on the page
+- Enter your full name when prompted
+- Review all 42 images and tag each one
+- Submit when done
+
+Let me know if you have any questions. Good luck!
+
+--------------------------------------------------------------
+
+
+IMPORTANT LINKS
+---------------
+
+Candidate test:
+https://iv-ai.github.io/ponto-tagger-test/
+
+Results viewer (admin only):
+https://iv-ai.github.io/ponto-tagger-test/results.html
+
+GitHub repo:
+https://github.com/iv-ai/ponto-tagger-test
+
+Apps Script (do not share):
+https://script.google.com/macros/s/AKfycbzLqCcIkx38nCnnqbm4ZMULzX0Q1SZSaRsMurHTAz5GuvA4Vx9RoNd2iDxar2LLDr4WkQ/exec
+
+Tagger Guideline:
+https://docs.google.com/document/d/1jpt4PgX-0Yo_sU2m9X6-YY_41Zn8Fa9khp53dPNWw1k/edit?tab=t.0
+
+
+BEFORE SENDING TO ANY CANDIDATE — SET THE ANSWER KEY
+-----------------------------------------------------
+
+This only needs to be done once (or when you want to update the answers).
+
+1. Go to the candidate test link above
+2. Click the guideline link on the page and read it
+3. Type exactly: I have fully read the guidelines
+4. Enter name: poiMaster   <-- must be exact, case-sensitive
+5. Tag all 42 items
+6. Click Submit
+
+Your answers are now saved as the master answer key. All candidate
+submissions will be automatically scored against it.
+
+To update the answer key later: repeat the same steps. It overwrites
+the previous one.
+
+
+SENDING THE TEST TO A CANDIDATE
+--------------------------------
+
+1. Copy the email blurb at the top of this file
+2. Fill in the candidate's name
+3. Send — that's it
+
+Candidates do not need an account or login. They just open the link.
+
+
+VIEWING RESULTS
+---------------
+
+1. Go to the results viewer link above
+2. On your first visit, paste the Apps Script URL and click "Load Results"
+   (it saves in your browser — you won't need to paste it again)
+3. Click "Refresh" anytime to pull the latest submissions
+
+What you'll see:
+
+- Green banner at the top = answer key is set. Yellow = not set yet.
+- Candidate cards = one per submission, sorted by score (highest first)
+  Each card shows: score %, correct/total, breakdown by tag type
+- Results table = every item x every candidate
+  Green cell = correct answer. Red cell = wrong answer.
+  Yellow column = the poiMaster answer key for reference
+  Click any image thumbnail to expand it full size
+- Export CSV button = downloads a spreadsheet with all answers and scores
+
+
+HOW SCORING WORKS
+-----------------
+
+Each of the 42 items is scored as correct (1) or incorrect (0) against
+the poiMaster answer key. Score = correct / total x 100.
+
+The 5 tag options are:
+  Ready              — output image is good to go
+  Needs Design Review — needs a minor design edit
+  Regenerate         — needs to be regenerated
+  Needs New Input    — input image is unusable
+  Flag               — location is a skip category
+
+
+TROUBLESHOOTING
+---------------
+
+Start button won't activate
+  → Candidate must click the guideline link AND type the exact phrase:
+    "I have fully read the guidelines"
+
+Submission fails
+  → Check the Apps Script is deployed with "Anyone" access.
+    Go to script.google.com → the project → Deploy → Manage deployments.
+
+Results viewer shows no data
+  → Make sure the Apps Script URL is pasted in the viewer correctly.
+  → Try clicking Refresh.
+
+Answer key missing (yellow warning in viewer)
+  → Go to the test and submit as poiMaster first.
+
+Need to swap a test image
+  → Get the place ID from the production tool
+  → Share it with the developer — they'll update the file within minutes.
+
+Need to re-deploy Apps Script after a code change
+  → Go to Extensions > Apps Script > Deploy > Manage deployments
+  → Edit the existing deployment (do NOT create a new one — the URL will change)
