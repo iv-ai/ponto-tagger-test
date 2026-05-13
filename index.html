@@ -109,7 +109,7 @@
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="hsl(221,83%,53%)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="flex-shrink-0 mt-0.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
           <div>
             <p class="font-semibold text-blue-800">You must read the guideline before starting</p>
-            <a href="https://docs.google.com/document/d/1jpt4PgX-0Yo_sU2m9X6-YY_41Zn8Fa9khp53dPNWw1k/edit?tab=t.0" target="_blank" onclick="guidelineOpened=true" class="text-blue-600 underline hover:text-blue-800">Open Tagger Guideline Document →</a>
+            <a href="https://docs.google.com/document/d/1jpt4PgX-0Yo_sU2m9X6-YY_41Zn8Fa9khp53dPNWw1k/edit?tab=t.0" target="_blank" onclick="guidelineOpened=true; checkConfirmPhrase();" class="text-blue-600 underline hover:text-blue-800">Open Tagger Guideline Document →</a>
           </div>
         </div>
         <p>You will be shown <strong>42 location images</strong> — each with an input photo and an AI-generated output photo.</p>
@@ -125,7 +125,7 @@
       </div>
       <div class="space-y-2">
         <label class="block text-sm font-medium text-gray-700">Your name <span class="text-red-500">*</span></label>
-        <input type="text" id="tester-name-input" placeholder="e.g. Jane Smith" />
+        <input type="text" id="tester-name-input" placeholder="e.g. Jane Smith" oninput="checkConfirmPhrase()" />
         <p id="name-error" class="text-xs text-red-500 hidden">Please enter your name before starting.</p>
       </div>
       <div class="space-y-2">
@@ -417,7 +417,8 @@ let guidelineOpened = false;
 
 function checkConfirmPhrase() {
   const val = document.getElementById('confirm-read-input').value;
-  const ready = guidelineOpened && val === CONFIRM_PHRASE;
+  const name = document.getElementById('tester-name-input').value.trim();
+  const ready = guidelineOpened && val === CONFIRM_PHRASE && name.length > 0;
   const btn = document.getElementById('start-btn');
   btn.disabled = !ready;
   btn.style.opacity = ready ? '1' : '0.4';
