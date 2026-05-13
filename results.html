@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ponto Tagger Test — Results Viewer</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    body { font-family: 'Inter', system-ui, sans-serif; background: #f8fafc; }
+    .tag-badge { display: inline-flex; align-items: center; padding: 0.15rem 0.5rem; border-radius: 9999px; font-size: 0.7rem; font-weight: 600; white-space: nowrap; }
+    .tag-ready { background: #dcfce7; color: #15803d; }
+    .tag-design { background: #f3e8ff; color: #7e22ce; }
+    .tag-regenerate { background: #fef9c3; color: #a16207; }
+    .tag-newinput { background: #dbeafe; color: #1d4ed8; }
+    .tag-flagged { background: #fee2e2; color: #b91c1c; }
+    .tag-empty { background: #f1f5f9; color: #94a3b8; }
+    .tagger-col { min-width: 120px; }
+    .item-img { width: 72px; height: 54px; object-fit: cover; border-radius: 4px; border: 1px solid #e2e8f0; cursor: pointer; }
+    .item-img:hover { opacity: 0.85; }
+    .sticky-header { position: sticky; top: 0; z-index: 10; background: white; border-bottom: 1px solid #e2e8f0; }
+    .score-chip { font-size: 0.65rem; font-weight: 700; padding: 0.1rem 0.4rem; border-radius: 9999px; }
+    input[type="text"], input[type="url"] {
+      border: 1px solid #e2e8f0; border-radius: 0.375rem; padding: 0.375rem 0.625rem;
+      font-size: 0.8rem; font-family: inherit; outline: none; width: 100%;
+    }
+    input:focus { border-color: hsl(221,83%,53%); box-shadow: 0 0 0 2px hsl(221,83%,53%,0.2); }
+    .btn { display: inline-flex; align-items: center; justify-content: center; border-radius: 0.375rem; font-size: 0.8rem; font-weight: 500; padding: 0.4rem 0.875rem; cursor: pointer; border: 1px solid transparent; transition: all 0.15s; }
+    .btn-primary { background: hsl(221,83%,53%); color: white; }
+    .btn-primary:hover { background: hsl(221,83%,45%); }
+    .btn-outline { background: white; color: #1e293b; border-color: #e2e8f0; }
+    .btn-outline:hover { background: #f8fafc; }
+    .lightbox { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 100; align-items: center; justify-content: center; flex-direction: column; gap: 1rem; }
+    .lightbox.open { display: flex; }
+    .lightbox img { max-width: 90vw; max-height: 80vh; border-radius: 0.5rem; object-fit: contain; }
+    .spinner { width: 1.5rem; height: 1.5rem; border: 2px solid #e2e8f0; border-top-color: hsl(221,83%,53%); border-radius: 50%; animation: spin 0.7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <img id="lightbox-img" src="" alt="" />
+  <p class="text-white text-xs opacity-60">Click anywhere to close</p>
+</div>
+
+<div class="max-w-full px-6 py-6 space-y-5">
+
+  <!-- Header -->
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-xl font-bold text-gray-900">Ponto Tagger Test — Results</h1>
+      <p class="text-sm text-gray-500">Review all candidate submissions side by side</p>
+    </div>
+    <div class="flex gap-2">
+      <button class="btn btn-outline" onclick="exportCSV()">Export CSV</button>
+      <button class="btn btn-primary" onclick="document.getElementById('sheet-url-section').classList.toggle('hidden')">
+        Load from Sheet
+      </button>
+    </div>
+  </div>
+
+  <!-- Sheet URL input (hidden by default) -->
+  <div id="sheet-url-section" class="hidden bg-white border border-gray-200 rounded-lg p-4 space-y-3">
+    <p class="text-sm font-medium text-gray-700">Google Sheet JSON URL</p>
+    <p class="text-xs text-gray-500">Publish your Google Sheet as JSON (File → Share → Publish to web → CSV/JSON) and paste the URL below.</p>
+    <div class="flex gap-2">
+      <input type="url" id="sheet-url-input" placeholder="https://docs.google.com/spreadsheets/d/.../..." />
+      <button class="btn btn-primary whitespace-nowrap" onclick="loadFromSheet()">Load</button>
+    </div>
+    <p id="sheet-error" class="text-xs text-red-500 hidden"></p>
+  </div>
+
+  <!-- Stats bar -->
+  <div id="stats-bar" class="hidden grid grid-cols-2 md:grid-cols-6 gap-3">
+    <div class="bg-white rounded-lg border p-3 text-center">
+      <p class="text-xs text-gray-500">Submissions</p>
+      <p class="text-2xl font-bold text-gray-900" id="stat-submissions">0</p>
+    </div>
+    <div class="bg-white rounded-lg border p-3 text-center">
+      <p class="text-xs text-gray-500">Ready</p>
+      <p class="text-2xl font-bold text-green-600" id="stat-ready">0</p>
+    </div>
+    <div class="bg-white rounded-lg border p-3 text-center">
+      <p class="text-xs text-gray-500">Design</p>
+      <p class="text-2xl font-bold text-purple-600" id="stat-design">0</p>
+    </div>
+    <div class="bg-white rounded-lg border p-3 text-center">
+      <p class="text-xs text-gray-500">Regenerate</p>
+      <p class="text-2xl font-bold text-yellow-600" id="stat-regenerate">0</p>
+    </div>
+    <div class="bg-white rounded-lg border p-3 text-center">
+      <p class="text-xs text-gray-500">New Input</p>
+      <p class="text-2xl font-bold text-blue-600" id="stat-newinput">0</p>
+    </div>
+    <div class="bg-white rounded-lg border p-3 text-center">
+      <p class="text-xs text-gray-500">Flagged</p>
+      <p class="text-2xl font-bold text-red-600" id="stat-flagged">0</p>
+    </div>
+  </div>
+
+  <!-- Placeholder when no data -->
+  <div id="no-data-msg" class="bg-white rounded-lg border border-dashed border-gray-300 p-12 text-center space-y-2">
+    <div class="spinner mx-auto opacity-40"></div>
+    <p class="text-gray-500 font-medium mt-3">No submissions loaded yet</p>
+    <p class="text-sm text-gray-400">Use "Load from Sheet" to pull live submissions, or paste sample JSON below.</p>
+    <div class="mt-4 space-y-2 max-w-lg mx-auto text-left">
+      <p class="text-xs font-medium text-gray-500">Or paste raw JSON submission:</p>
+      <textarea id="json-paste" rows="5" style="width:100%;border:1px solid #e2e8f0;border-radius:0.375rem;padding:0.5rem;font-size:0.75rem;font-family:monospace;" placeholder='[{"tester_name":"Jane","submitted_at":"...","items":[...]}]'></textarea>
+      <button class="btn btn-outline w-full" onclick="loadFromJSON()">Load JSON</button>
+    </div>
+  </div>
+
+  <!-- Results table -->
+  <div id="results-table-wrapper" class="hidden overflow-x-auto rounded-lg border bg-white">
+    <table class="min-w-full text-sm border-collapse">
+      <thead>
+        <tr class="sticky-header">
+          <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide border-r w-48">Item</th>
+          <th class="text-center px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide border-r w-28">Images</th>
+          <div id="tagger-headers-row"></div>
+        </tr>
+      </thead>
+      <tbody id="results-tbody"></tbody>
+    </table>
+  </div>
+
+  <!-- Per-candidate summary -->
+  <div id="candidate-summary" class="hidden space-y-3">
+    <h2 class="text-base font-semibold text-gray-800">Per-Candidate Summary</h2>
+    <div id="candidate-cards" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+  </div>
+
+</div>
+
+<script>
+let allSubmissions = []; // array of submission objects
+
+// ─── DATA LOADING ────────────────────────────────────────────────────────────
+async function loadFromSheet() {
+  const url = document.getElementById('sheet-url-input').value.trim();
+  const errEl = document.getElementById('sheet-error');
+  errEl.classList.add('hidden');
+  if (!url) { errEl.textContent = 'Please enter a URL.'; errEl.classList.remove('hidden'); return; }
+  try {
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const data = await resp.json();
+    // Support both: array of submissions, or Google Sheets JSON format
+    if (Array.isArray(data)) {
+      allSubmissions = data;
+    } else if (data.values) {
+      allSubmissions = sheetsToSubmissions(data.values);
+    } else {
+      throw new Error('Unrecognized format');
+    }
+    render();
+  } catch (e) {
+    errEl.textContent = 'Failed to load: ' + e.message;
+    errEl.classList.remove('hidden');
+  }
+}
+
+function loadFromJSON() {
+  const raw = document.getElementById('json-paste').value.trim();
+  try {
+    const data = JSON.parse(raw);
+    allSubmissions = Array.isArray(data) ? data : [data];
+    render();
+  } catch (e) {
+    alert('Invalid JSON: ' + e.message);
+  }
+}
+
+// Convert flat Google Sheets rows to submission objects
+// Expected columns: tester_name, submitted_at, item_1_place_id, item_1_tag, item_1_comment, item_2_... etc.
+function sheetsToSubmissions(rows) {
+  if (!rows.length) return [];
+  const headers = rows[0];
+  return rows.slice(1).map(row => {
+    const obj = {};
+    headers.forEach((h, i) => { obj[h] = row[i] || ''; });
+    const items = [];
+    let i = 1;
+    while (obj['item_' + i + '_place_id'] !== undefined) {
+      items.push({
+        index: i,
+        place_id: obj['item_' + i + '_place_id'],
+        place_name: obj['item_' + i + '_place_name'],
+        address: obj['item_' + i + '_address'],
+        input_url: obj['item_' + i + '_input_url'],
+        output_url: obj['item_' + i + '_output_url'],
+        tag: obj['item_' + i + '_tag'],
+        comment: obj['item_' + i + '_comment'],
+      });
+      i++;
+    }
+    return { tester_name: obj.tester_name, submitted_at: obj.submitted_at, items };
+  });
+}
+
+// ─── RENDER ──────────────────────────────────────────────────────────────────
+function render() {
+  if (!allSubmissions.length) return;
+  document.getElementById('no-data-msg').classList.add('hidden');
+  document.getElementById('results-table-wrapper').classList.remove('hidden');
+  document.getElementById('stats-bar').classList.remove('hidden');
+  document.getElementById('candidate-summary').classList.remove('hidden');
+
+  renderStats();
+  renderTable();
+  renderCandidateSummary();
+}
+
+function tagClass(tag) {
+  const map = { ready: 'tag-ready', design: 'tag-design', regenerate: 'tag-regenerate', newinput: 'tag-newinput', flagged: 'tag-flagged' };
+  return map[tag] || 'tag-empty';
+}
+function tagLabel(tag) {
+  const map = { ready: 'Ready', design: 'Design', regenerate: 'Regen', newinput: 'New Input', flagged: 'Flag' };
+  return map[tag] || (tag || '—');
+}
+
+function renderStats() {
+  const counts = { ready: 0, design: 0, regenerate: 0, newinput: 0, flagged: 0 };
+  allSubmissions.forEach(sub => sub.items.forEach(it => { if (it.tag && counts[it.tag] !== undefined) counts[it.tag]++; }));
+  document.getElementById('stat-submissions').textContent = allSubmissions.length;
+  Object.keys(counts).forEach(k => { document.getElementById('stat-' + k).textContent = counts[k]; });
+}
+
+function renderTable() {
+  const table = document.getElementById('results-table-wrapper').querySelector('table');
+
+  // Rebuild header row
+  const existingHead = table.querySelector('thead tr');
+  // Remove any tagger-col headers first
+  existingHead.querySelectorAll('.tagger-col').forEach(th => th.remove());
+  allSubmissions.forEach(sub => {
+    const th = document.createElement('th');
+    th.className = 'tagger-col px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide border-l text-center';
+    th.textContent = sub.tester_name;
+    existingHead.appendChild(th);
+  });
+
+  // Build rows — one row per item
+  const tbody = document.getElementById('results-tbody');
+  tbody.innerHTML = '';
+
+  // Get all unique items from first submission (assume same 30 items for everyone)
+  const template = allSubmissions[0].items;
+  template.forEach((item, idx) => {
+    const tr = document.createElement('tr');
+    tr.className = idx % 2 === 0 ? 'bg-white' : 'bg-gray-50';
+
+    // Item name + address
+    const tdItem = document.createElement('td');
+    tdItem.className = 'px-4 py-3 border-r align-top';
+    tdItem.innerHTML = `
+      <p class="font-medium text-gray-800 text-xs leading-tight">${item.place_name || item.place_id}</p>
+      <p class="text-gray-400 text-xs mt-0.5 leading-tight">${item.address || ''}</p>
+    `;
+
+    // Images
+    const tdImg = document.createElement('td');
+    tdImg.className = 'px-3 py-3 border-r align-top';
+    tdImg.innerHTML = `
+      <div class="flex gap-1.5">
+        ${item.input_url ? `<img class="item-img" src="${item.input_url}" alt="in" title="Input" onclick="openLightbox('${item.input_url}')" />` : '<div class="item-img bg-gray-100 flex items-center justify-center text-xs text-gray-300">—</div>'}
+        ${item.output_url ? `<img class="item-img" src="${item.output_url}" alt="out" title="Output" onclick="openLightbox('${item.output_url}')" />` : '<div class="item-img bg-gray-100 flex items-center justify-center text-xs text-gray-300">—</div>'}
+      </div>
+    `;
+
+    tr.appendChild(tdItem);
+    tr.appendChild(tdImg);
+
+    // One column per tagger
+    allSubmissions.forEach(sub => {
+      const ans = sub.items.find(it => it.index === item.index || it.place_id === item.place_id);
+      const tag = ans?.tag || '';
+      const comment = ans?.comment || '';
+      const td = document.createElement('td');
+      td.className = 'tagger-col px-3 py-3 border-l align-top text-center';
+      td.innerHTML = `
+        <span class="tag-badge ${tagClass(tag)}">${tagLabel(tag)}</span>
+        ${comment ? `<p class="text-xs text-gray-400 mt-1 text-left leading-tight max-w-xs">${comment}</p>` : ''}
+      `;
+      tr.appendChild(td);
+    });
+
+    tbody.appendChild(tr);
+  });
+}
+
+function renderCandidateSummary() {
+  const container = document.getElementById('candidate-cards');
+  container.innerHTML = '';
+  allSubmissions.forEach(sub => {
+    const counts = { ready: 0, design: 0, regenerate: 0, newinput: 0, flagged: 0, empty: 0 };
+    sub.items.forEach(it => {
+      if (it.tag && counts[it.tag] !== undefined) counts[it.tag]++;
+      else if (!it.tag) counts.empty++;
+    });
+    const total = sub.items.length;
+    const tagged = total - counts.empty;
+    const completionPct = Math.round((tagged / total) * 100);
+
+    const card = document.createElement('div');
+    card.className = 'bg-white rounded-lg border p-4 space-y-3';
+    card.innerHTML = `
+      <div class="flex items-start justify-between">
+        <div>
+          <p class="font-semibold text-gray-900">${sub.tester_name}</p>
+          <p class="text-xs text-gray-400">${sub.submitted_at ? new Date(sub.submitted_at).toLocaleString() : ''}</p>
+        </div>
+        <span class="score-chip ${completionPct === 100 ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}">${completionPct}% tagged</span>
+      </div>
+      <div class="w-full bg-gray-100 rounded-full h-1.5">
+        <div class="h-1.5 rounded-full bg-blue-500" style="width:${completionPct}%"></div>
+      </div>
+      <div class="grid grid-cols-3 gap-2 text-center">
+        <div><p class="text-xs text-gray-400">Ready</p><p class="font-semibold text-green-600">${counts.ready}</p></div>
+        <div><p class="text-xs text-gray-400">Design</p><p class="font-semibold text-purple-600">${counts.design}</p></div>
+        <div><p class="text-xs text-gray-400">Regen</p><p class="font-semibold text-yellow-600">${counts.regenerate}</p></div>
+        <div><p class="text-xs text-gray-400">New Input</p><p class="font-semibold text-blue-600">${counts.newinput}</p></div>
+        <div><p class="text-xs text-gray-400">Flag</p><p class="font-semibold text-red-600">${counts.flagged}</p></div>
+        <div><p class="text-xs text-gray-400">Untagged</p><p class="font-semibold text-gray-400">${counts.empty}</p></div>
+      </div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+// ─── EXPORT ──────────────────────────────────────────────────────────────────
+function exportCSV() {
+  if (!allSubmissions.length) { alert('No data to export.'); return; }
+  const template = allSubmissions[0].items;
+  const taggers = allSubmissions.map(s => s.tester_name);
+
+  const headerRow = ['#', 'place_id', 'place_name', ...taggers.flatMap(t => [t + '_tag', t + '_comment'])];
+  const rows = template.map((item, idx) => {
+    const row = [idx + 1, item.place_id, item.place_name || ''];
+    allSubmissions.forEach(sub => {
+      const ans = sub.items.find(it => it.index === item.index || it.place_id === item.place_id);
+      row.push(ans?.tag || '', ans?.comment || '');
+    });
+    return row;
+  });
+
+  const csv = [headerRow, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = 'ponto_tagger_test_results.csv'; a.click();
+}
+
+// ─── LIGHTBOX ────────────────────────────────────────────────────────────────
+function openLightbox(url) {
+  document.getElementById('lightbox-img').src = url;
+  document.getElementById('lightbox').classList.add('open');
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('open');
+  document.getElementById('lightbox-img').src = '';
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
+
+// ─── DEMO DATA for testing the viewer layout ──────────────────────────────────
+// Uncomment the block below to preview the results viewer with fake data
+/*
+allSubmissions = [
+  {
+    tester_name: "Jane Smith",
+    submitted_at: new Date().toISOString(),
+    items: Array.from({length: 30}, (_, i) => ({
+      index: i+1, place_id: "item_" + String(i+1).padStart(3,'0'),
+      place_name: "Sample Place " + (i+1), address: "123 Main St",
+      input_url: "https://placehold.co/600x400/e2e8f0/64748b?text=Input+" + (i+1),
+      output_url: "https://placehold.co/600x400/dbeafe/3b82f6?text=Output+" + (i+1),
+      tag: ["ready","design","regenerate","newinput","flagged"][i % 5], comment: ""
+    }))
+  },
+  {
+    tester_name: "John Doe",
+    submitted_at: new Date().toISOString(),
+    items: Array.from({length: 30}, (_, i) => ({
+      index: i+1, place_id: "item_" + String(i+1).padStart(3,'0'),
+      place_name: "Sample Place " + (i+1), address: "123 Main St",
+      input_url: "https://placehold.co/600x400/e2e8f0/64748b?text=Input+" + (i+1),
+      output_url: "https://placehold.co/600x400/dbeafe/3b82f6?text=Output+" + (i+1),
+      tag: ["regenerate","ready","flagged","design","newinput"][i % 5], comment: i % 3 === 0 ? "Looks similar to input" : ""
+    }))
+  }
+];
+render();
+*/
+</script>
+</body>
+</html>
