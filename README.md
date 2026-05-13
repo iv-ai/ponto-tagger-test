@@ -132,6 +132,10 @@ See [`CLAUDE.md`](CLAUDE.md) — it has the full architecture, key constants, co
 
 ## Admin guide
 
+> **Delegating this to someone?** Share this link with them and ask them to read it fully before starting:
+> https://docs.google.com/document/d/1CsbKueMIG1ooZEdZtUMkMM4M24FkvWFvkaZkWyyh3ds/edit?tab=t.0
+> It covers all operational steps — sending tests, viewing results, setting the answer key — without requiring any technical knowledge.
+
 ```
 PONTO TAGGER TEST — ADMIN GUIDE
 ================================
