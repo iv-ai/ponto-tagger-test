@@ -38,6 +38,10 @@ https://iv-ai.github.io/ponto-tagger-test/
 Results viewer (admin only):
 https://iv-ai.github.io/ponto-tagger-test/results.html
 
+Admin panel (answer key + place swaps):
+https://iv-ai.github.io/ponto-tagger-test/admin.html
+Passphrase: poiMaster
+
 GitHub repo:
 https://github.com/iv-ai/ponto-tagger-test
 
@@ -53,6 +57,7 @@ BEFORE SENDING TO ANY CANDIDATE — SET THE ANSWER KEY
 
 This only needs to be done once (or when you want to update the answers).
 
+Option A — via the test page:
 1. Go to the candidate test link above
 2. Click the guideline link on the page and read it
 3. Type exactly: I have fully read the guidelines
@@ -60,11 +65,17 @@ This only needs to be done once (or when you want to update the answers).
 5. Tag all 42 items
 6. Click Submit
 
+Option B — via the admin panel (easier to edit later):
+1. Go to the admin panel link above
+2. Enter passphrase: poiMaster
+3. In the "Master Answer Key" section, set the tag for each item
+4. Click "Save Answer Key"
+
 Your answers are now saved as the master answer key. All candidate
 submissions will be automatically scored against it.
 
-To update the answer key later: repeat the same steps. It overwrites
-the previous one.
+To update the answer key later: use the admin panel (Option B) or
+repeat the test as poiMaster (Option A). Either overwrites the previous one.
 
 
 SENDING THE TEST TO A CANDIDATE
@@ -111,6 +122,27 @@ The 5 tag options are:
   Flag               — location is a skip category
 
 
+SWAPPING TEST IMAGES
+--------------------
+
+Images are stored in the repo (images/ folder) and are frozen —
+they do NOT pull from production. This means a swap requires a code change.
+
+Steps:
+1. Get the place ID from the production tool (ponto-ui)
+2. Share the place ID with the developer
+3. The developer will:
+   a. Fetch both image URLs from the Ponto API
+   b. Download input_{id}.jpg and output_{id}_{timestamp}.jpg into images/
+   c. Update the matching ITEMS entry in index.html to use images/ paths
+   d. Commit and push to GitHub
+4. Live within ~30 seconds of the push
+
+IMPORTANT: Never point test images at live GCS/production URLs.
+Always download first, commit to images/, use local path.
+Otherwise the image changes or disappears when production reprocesses that place.
+
+
 TROUBLESHOOTING
 ---------------
 
@@ -127,11 +159,16 @@ Results viewer shows no data
   → Try clicking Refresh.
 
 Answer key missing (yellow warning in viewer)
-  → Go to the test and submit as poiMaster first.
+  → Use the admin panel to set the answer key, or submit as poiMaster on the test page.
+
+Images not loading
+  → Images are hosted on GitHub Pages from the images/ folder.
+    If a specific image is missing, the file wasn't committed to the repo.
 
 Need to swap a test image
   → Get the place ID from the production tool
-  → Share it with the developer — they'll update the file within minutes.
+  → Share it with the developer — they'll download the images, update index.html,
+    commit, and push. Live within ~30 seconds.
 
 Need to re-deploy Apps Script after a code change
   → Go to Extensions > Apps Script > Deploy > Manage deployments
