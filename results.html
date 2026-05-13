@@ -15,11 +15,13 @@
     .tag-newinput { background: #dbeafe; color: #1d4ed8; }
     .tag-flagged { background: #fee2e2; color: #b91c1c; }
     .tag-empty { background: #f1f5f9; color: #94a3b8; }
-    .tagger-col { min-width: 120px; }
+    .tagger-col { min-width: 130px; }
     .item-img { width: 72px; height: 54px; object-fit: cover; border-radius: 4px; border: 1px solid #e2e8f0; cursor: pointer; }
     .item-img:hover { opacity: 0.85; }
     .sticky-header { position: sticky; top: 0; z-index: 10; background: white; border-bottom: 1px solid #e2e8f0; }
-    .score-chip { font-size: 0.65rem; font-weight: 700; padding: 0.1rem 0.4rem; border-radius: 9999px; }
+    .score-chip { font-size: 0.65rem; font-weight: 700; padding: 0.1rem 0.5rem; border-radius: 9999px; }
+    .cell-correct { background: #f0fdf4; }
+    .cell-wrong { background: #fff1f2; }
     input[type="text"], input[type="url"] {
       border: 1px solid #e2e8f0; border-radius: 0.375rem; padding: 0.375rem 0.625rem;
       font-size: 0.8rem; font-family: inherit; outline: none; width: 100%;
@@ -48,243 +50,271 @@
 <div class="max-w-full px-6 py-6 space-y-5">
 
   <!-- Header -->
-  <div class="flex items-center justify-between">
+  <div class="flex items-center justify-between flex-wrap gap-3">
     <div>
       <h1 class="text-xl font-bold text-gray-900">Ponto Tagger Test — Results</h1>
-      <p class="text-sm text-gray-500">Review all candidate submissions side by side</p>
+      <p class="text-sm text-gray-500">Candidate submissions scored against poiMaster answer key</p>
     </div>
-    <div class="flex gap-2">
+    <div class="flex gap-2 flex-wrap">
       <button class="btn btn-outline" onclick="exportCSV()">Export CSV</button>
-      <button class="btn btn-primary" onclick="document.getElementById('sheet-url-section').classList.toggle('hidden')">
-        Load from Sheet
+      <button class="btn btn-primary" onclick="loadData()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-1.5"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+        Refresh
       </button>
     </div>
   </div>
 
-  <!-- Sheet URL input (hidden by default) -->
-  <div id="sheet-url-section" class="hidden bg-white border border-gray-200 rounded-lg p-4 space-y-3">
-    <p class="text-sm font-medium text-gray-700">Google Sheet JSON URL</p>
-    <p class="text-xs text-gray-500">Publish your Google Sheet as JSON (File → Share → Publish to web → CSV/JSON) and paste the URL below.</p>
+  <!-- Apps Script URL config -->
+  <div class="bg-white border border-gray-200 rounded-lg p-4 space-y-2" id="url-config">
+    <p class="text-sm font-medium text-gray-700">Apps Script URL <span class="text-red-500">*</span></p>
+    <p class="text-xs text-gray-400">Paste your deployed Web App URL. This page will load submissions and the poiMaster answer key directly.</p>
     <div class="flex gap-2">
-      <input type="url" id="sheet-url-input" placeholder="https://docs.google.com/spreadsheets/d/.../..." />
-      <button class="btn btn-primary whitespace-nowrap" onclick="loadFromSheet()">Load</button>
+      <input type="url" id="script-url-input" placeholder="https://script.google.com/macros/s/.../exec" />
+      <button class="btn btn-primary whitespace-nowrap" onclick="saveAndLoad()">Load Results</button>
     </div>
-    <p id="sheet-error" class="text-xs text-red-500 hidden"></p>
+    <p id="url-error" class="text-xs text-red-500 hidden"></p>
+  </div>
+
+  <!-- Master key status -->
+  <div id="master-status" class="hidden flex items-center gap-2 text-sm px-4 py-2.5 rounded-lg border">
   </div>
 
   <!-- Stats bar -->
-  <div id="stats-bar" class="hidden grid grid-cols-2 md:grid-cols-6 gap-3">
+  <div id="stats-bar" class="hidden grid grid-cols-2 md:grid-cols-5 gap-3">
     <div class="bg-white rounded-lg border p-3 text-center">
       <p class="text-xs text-gray-500">Submissions</p>
       <p class="text-2xl font-bold text-gray-900" id="stat-submissions">0</p>
     </div>
     <div class="bg-white rounded-lg border p-3 text-center">
-      <p class="text-xs text-gray-500">Ready</p>
-      <p class="text-2xl font-bold text-green-600" id="stat-ready">0</p>
+      <p class="text-xs text-gray-500">Avg Score</p>
+      <p class="text-2xl font-bold text-blue-600" id="stat-avg-score">—</p>
     </div>
     <div class="bg-white rounded-lg border p-3 text-center">
-      <p class="text-xs text-gray-500">Design</p>
-      <p class="text-2xl font-bold text-purple-600" id="stat-design">0</p>
+      <p class="text-xs text-gray-500">Top Score</p>
+      <p class="text-2xl font-bold text-green-600" id="stat-top-score">—</p>
     </div>
     <div class="bg-white rounded-lg border p-3 text-center">
-      <p class="text-xs text-gray-500">Regenerate</p>
-      <p class="text-2xl font-bold text-yellow-600" id="stat-regenerate">0</p>
+      <p class="text-xs text-gray-500">Items</p>
+      <p class="text-2xl font-bold text-gray-700" id="stat-items">—</p>
     </div>
     <div class="bg-white rounded-lg border p-3 text-center">
-      <p class="text-xs text-gray-500">New Input</p>
-      <p class="text-2xl font-bold text-blue-600" id="stat-newinput">0</p>
-    </div>
-    <div class="bg-white rounded-lg border p-3 text-center">
-      <p class="text-xs text-gray-500">Flagged</p>
-      <p class="text-2xl font-bold text-red-600" id="stat-flagged">0</p>
+      <p class="text-xs text-gray-500">Master Set</p>
+      <p class="text-2xl font-bold" id="stat-master">—</p>
     </div>
   </div>
 
-  <!-- Placeholder when no data -->
+  <!-- Loading -->
+  <div id="loading-msg" class="hidden bg-white rounded-lg border p-12 text-center space-y-2">
+    <div class="spinner mx-auto"></div>
+    <p class="text-gray-500 text-sm mt-3">Loading results…</p>
+  </div>
+
+  <!-- No data -->
   <div id="no-data-msg" class="bg-white rounded-lg border border-dashed border-gray-300 p-12 text-center space-y-2">
-    <div class="spinner mx-auto opacity-40"></div>
-    <p class="text-gray-500 font-medium mt-3">No submissions loaded yet</p>
-    <p class="text-sm text-gray-400">Use "Load from Sheet" to pull live submissions, or paste sample JSON below.</p>
-    <div class="mt-4 space-y-2 max-w-lg mx-auto text-left">
-      <p class="text-xs font-medium text-gray-500">Or paste raw JSON submission:</p>
-      <textarea id="json-paste" rows="5" style="width:100%;border:1px solid #e2e8f0;border-radius:0.375rem;padding:0.5rem;font-size:0.75rem;font-family:monospace;" placeholder='[{"tester_name":"Jane","submitted_at":"...","items":[...]}]'></textarea>
-      <button class="btn btn-outline w-full" onclick="loadFromJSON()">Load JSON</button>
-    </div>
+    <p class="text-gray-400 text-sm">Enter your Apps Script URL above and click Load Results.</p>
+  </div>
+
+  <!-- Per-candidate summary cards -->
+  <div id="candidate-summary" class="hidden space-y-3">
+    <h2 class="text-base font-semibold text-gray-800">Candidate Scores</h2>
+    <div id="candidate-cards" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
   </div>
 
   <!-- Results table -->
   <div id="results-table-wrapper" class="hidden overflow-x-auto rounded-lg border bg-white">
-    <table class="min-w-full text-sm border-collapse">
+    <table class="min-w-full text-sm border-collapse" id="results-table">
       <thead>
-        <tr class="sticky-header">
-          <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide border-r w-48">Item</th>
-          <th class="text-center px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide border-r w-28">Images</th>
-          <div id="tagger-headers-row"></div>
+        <tr class="sticky-header" id="table-header-row">
+          <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide border-r w-44">Item</th>
+          <th class="text-center px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide border-r w-32">Images</th>
+          <th class="text-center px-3 py-3 text-xs font-semibold text-yellow-600 uppercase tracking-wide border-r w-28 bg-yellow-50">Answer Key</th>
         </tr>
       </thead>
       <tbody id="results-tbody"></tbody>
     </table>
   </div>
 
-  <!-- Per-candidate summary -->
-  <div id="candidate-summary" class="hidden space-y-3">
-    <h2 class="text-base font-semibold text-gray-800">Per-Candidate Summary</h2>
-    <div id="candidate-cards" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
-  </div>
-
 </div>
 
 <script>
-let allSubmissions = []; // array of submission objects
+// ─── CONFIG ──────────────────────────────────────────────────────────────────
+let SCRIPT_URL = localStorage.getItem('ponto_script_url') || '';
+let masterKey = null;      // { place_id: { tag, comment } }
+let allSubmissions = [];
 
-// ─── DATA LOADING ────────────────────────────────────────────────────────────
-async function loadFromSheet() {
-  const url = document.getElementById('sheet-url-input').value.trim();
-  const errEl = document.getElementById('sheet-error');
+if (SCRIPT_URL) {
+  document.getElementById('script-url-input').value = SCRIPT_URL;
+  loadData();
+}
+
+// ─── LOAD ─────────────────────────────────────────────────────────────────────
+function saveAndLoad() {
+  const url = document.getElementById('script-url-input').value.trim();
+  const errEl = document.getElementById('url-error');
   errEl.classList.add('hidden');
   if (!url) { errEl.textContent = 'Please enter a URL.'; errEl.classList.remove('hidden'); return; }
+  SCRIPT_URL = url;
+  localStorage.setItem('ponto_script_url', url);
+  loadData();
+}
+
+async function loadData() {
+  if (!SCRIPT_URL) return;
+  showLoading(true);
   try {
-    const resp = await fetch(url);
+    const resp = await fetch(SCRIPT_URL);
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     const data = await resp.json();
-    // Support both: array of submissions, or Google Sheets JSON format
-    if (Array.isArray(data)) {
-      allSubmissions = data;
-    } else if (data.values) {
-      allSubmissions = sheetsToSubmissions(data.values);
-    } else {
-      throw new Error('Unrecognized format');
-    }
+    masterKey = data.master || null;
+    allSubmissions = data.submissions || [];
     render();
   } catch (e) {
-    errEl.textContent = 'Failed to load: ' + e.message;
-    errEl.classList.remove('hidden');
+    showLoading(false);
+    document.getElementById('url-error').textContent = 'Failed to load: ' + e.message;
+    document.getElementById('url-error').classList.remove('hidden');
   }
 }
 
-function loadFromJSON() {
-  const raw = document.getElementById('json-paste').value.trim();
-  try {
-    const data = JSON.parse(raw);
-    allSubmissions = Array.isArray(data) ? data : [data];
-    render();
-  } catch (e) {
-    alert('Invalid JSON: ' + e.message);
-  }
-}
-
-// Convert flat Google Sheets rows to submission objects
-// Expected columns: tester_name, submitted_at, item_1_place_id, item_1_tag, item_1_comment, item_2_... etc.
-function sheetsToSubmissions(rows) {
-  if (!rows.length) return [];
-  const headers = rows[0];
-  return rows.slice(1).map(row => {
-    const obj = {};
-    headers.forEach((h, i) => { obj[h] = row[i] || ''; });
-    const items = [];
-    let i = 1;
-    while (obj['item_' + i + '_place_id'] !== undefined) {
-      items.push({
-        index: i,
-        place_id: obj['item_' + i + '_place_id'],
-        place_name: obj['item_' + i + '_place_name'],
-        address: obj['item_' + i + '_address'],
-        input_url: obj['item_' + i + '_input_url'],
-        output_url: obj['item_' + i + '_output_url'],
-        tag: obj['item_' + i + '_tag'],
-        comment: obj['item_' + i + '_comment'],
-      });
-      i++;
-    }
-    return { tester_name: obj.tester_name, submitted_at: obj.submitted_at, items };
-  });
+function showLoading(on) {
+  document.getElementById('loading-msg').classList.toggle('hidden', !on);
+  document.getElementById('no-data-msg').classList.add('hidden');
 }
 
 // ─── RENDER ──────────────────────────────────────────────────────────────────
 function render() {
-  if (!allSubmissions.length) return;
+  showLoading(false);
   document.getElementById('no-data-msg').classList.add('hidden');
-  document.getElementById('results-table-wrapper').classList.remove('hidden');
+
+  renderMasterStatus();
+
+  if (!allSubmissions.length && !masterKey) {
+    document.getElementById('no-data-msg').classList.remove('hidden');
+    document.getElementById('no-data-msg').querySelector('p').textContent =
+      'No submissions yet. Have candidates complete the test, or submit as poiMaster to set the answer key.';
+    return;
+  }
+
   document.getElementById('stats-bar').classList.remove('hidden');
-  document.getElementById('candidate-summary').classList.remove('hidden');
+  document.getElementById('results-table-wrapper').classList.remove('hidden');
 
   renderStats();
   renderTable();
-  renderCandidateSummary();
+  if (allSubmissions.length) {
+    document.getElementById('candidate-summary').classList.remove('hidden');
+    renderCandidateCards();
+  }
 }
 
-function tagClass(tag) {
-  const map = { ready: 'tag-ready', design: 'tag-design', regenerate: 'tag-regenerate', newinput: 'tag-newinput', flagged: 'tag-flagged' };
-  return map[tag] || 'tag-empty';
+function renderMasterStatus() {
+  const el = document.getElementById('master-status');
+  el.classList.remove('hidden');
+  if (masterKey) {
+    const count = Object.keys(masterKey).length;
+    el.className = 'flex items-center gap-2 text-sm px-4 py-2.5 rounded-lg border bg-green-50 border-green-200 text-green-700';
+    el.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      <span><strong>Answer key set</strong> — poiMaster has tagged ${count} items.</span>`;
+  } else {
+    el.className = 'flex items-center gap-2 text-sm px-4 py-2.5 rounded-lg border bg-yellow-50 border-yellow-200 text-yellow-700';
+    el.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+      <span><strong>No answer key yet.</strong> Take the test with name <code class="font-mono bg-yellow-100 px-1 rounded">poiMaster</code> to set it.</span>`;
+  }
 }
-function tagLabel(tag) {
-  const map = { ready: 'Ready', design: 'Design', regenerate: 'Regen', newinput: 'New Input', flagged: 'Flag' };
-  return map[tag] || (tag || '—');
+
+function score(submission) {
+  if (!masterKey) return null;
+  let correct = 0, total = 0;
+  submission.items.forEach(item => {
+    const ans = masterKey[item.place_id];
+    if (!ans) return;
+    total++;
+    if (item.tag === ans.tag) correct++;
+  });
+  return total ? { correct, total, pct: Math.round((correct / total) * 100) } : null;
+}
+
+function scoreColor(pct) {
+  if (pct >= 80) return 'bg-green-100 text-green-700';
+  if (pct >= 60) return 'bg-yellow-100 text-yellow-700';
+  return 'bg-red-100 text-red-700';
 }
 
 function renderStats() {
-  const counts = { ready: 0, design: 0, regenerate: 0, newinput: 0, flagged: 0 };
-  allSubmissions.forEach(sub => sub.items.forEach(it => { if (it.tag && counts[it.tag] !== undefined) counts[it.tag]++; }));
+  const scores = allSubmissions.map(s => score(s)).filter(Boolean);
   document.getElementById('stat-submissions').textContent = allSubmissions.length;
-  Object.keys(counts).forEach(k => { document.getElementById('stat-' + k).textContent = counts[k]; });
+  document.getElementById('stat-items').textContent = allSubmissions[0]?.items.length || (masterKey ? Object.keys(masterKey).length : '—');
+  document.getElementById('stat-master').textContent = masterKey ? '✓' : '✗';
+  document.getElementById('stat-master').className = 'text-2xl font-bold ' + (masterKey ? 'text-green-600' : 'text-red-400');
+
+  if (scores.length) {
+    const avg = Math.round(scores.reduce((a, s) => a + s.pct, 0) / scores.length);
+    const top = Math.max(...scores.map(s => s.pct));
+    document.getElementById('stat-avg-score').textContent = avg + '%';
+    document.getElementById('stat-top-score').textContent = top + '%';
+  } else {
+    document.getElementById('stat-avg-score').textContent = '—';
+    document.getElementById('stat-top-score').textContent = '—';
+  }
 }
 
 function renderTable() {
-  const table = document.getElementById('results-table-wrapper').querySelector('table');
-
-  // Rebuild header row
-  const existingHead = table.querySelector('thead tr');
-  // Remove any tagger-col headers first
-  existingHead.querySelectorAll('.tagger-col').forEach(th => th.remove());
+  const headerRow = document.getElementById('table-header-row');
+  // Remove old tagger columns
+  headerRow.querySelectorAll('.tagger-col').forEach(th => th.remove());
   allSubmissions.forEach(sub => {
+    const sc = score(sub);
     const th = document.createElement('th');
     th.className = 'tagger-col px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide border-l text-center';
-    th.textContent = sub.tester_name;
-    existingHead.appendChild(th);
+    th.innerHTML = `<div>${sub.tester_name}</div>` +
+      (sc ? `<div class="score-chip mt-1 ${scoreColor(sc.pct)}">${sc.correct}/${sc.total} · ${sc.pct}%</div>` : '');
+    headerRow.appendChild(th);
   });
 
-  // Build rows — one row per item
   const tbody = document.getElementById('results-tbody');
   tbody.innerHTML = '';
 
-  // Get all unique items from first submission (assume same 30 items for everyone)
-  const template = allSubmissions[0].items;
+  const template = allSubmissions[0]?.items || (masterKey ? Object.keys(masterKey).map((id, i) => ({ index: i+1, place_id: id })) : []);
+
   template.forEach((item, idx) => {
     const tr = document.createElement('tr');
-    tr.className = idx % 2 === 0 ? 'bg-white' : 'bg-gray-50';
+    tr.className = idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50';
 
-    // Item name + address
+    // Item name
     const tdItem = document.createElement('td');
     tdItem.className = 'px-4 py-3 border-r align-top';
-    tdItem.innerHTML = `
-      <p class="font-medium text-gray-800 text-xs leading-tight">${item.place_name || item.place_id}</p>
-      <p class="text-gray-400 text-xs mt-0.5 leading-tight">${item.address || ''}</p>
-    `;
+    tdItem.innerHTML = `<p class="font-medium text-gray-800 text-xs leading-tight">${item.place_name || item.place_id}</p>
+      <p class="text-gray-400 text-xs mt-0.5 leading-tight">${item.address || ''}</p>`;
 
     // Images
     const tdImg = document.createElement('td');
     tdImg.className = 'px-3 py-3 border-r align-top';
-    tdImg.innerHTML = `
-      <div class="flex gap-1.5">
-        ${item.input_url ? `<img class="item-img" src="${item.input_url}" alt="in" title="Input" onclick="openLightbox('${item.input_url}')" />` : '<div class="item-img bg-gray-100 flex items-center justify-center text-xs text-gray-300">—</div>'}
-        ${item.output_url ? `<img class="item-img" src="${item.output_url}" alt="out" title="Output" onclick="openLightbox('${item.output_url}')" />` : '<div class="item-img bg-gray-100 flex items-center justify-center text-xs text-gray-300">—</div>'}
-      </div>
-    `;
+    tdImg.innerHTML = `<div class="flex gap-1.5">
+      ${item.input_url ? `<img class="item-img" src="${item.input_url}" title="Input" onclick="openLightbox('${item.input_url}')" />` : '<div class="item-img bg-gray-100"></div>'}
+      ${item.output_url ? `<img class="item-img" src="${item.output_url}" title="Output" onclick="openLightbox('${item.output_url}')" />` : '<div class="item-img bg-gray-100"></div>'}
+    </div>`;
+
+    // Answer key column
+    const masterAns = masterKey?.[item.place_id];
+    const tdMaster = document.createElement('td');
+    tdMaster.className = 'px-3 py-3 border-r align-top text-center bg-yellow-50';
+    tdMaster.innerHTML = masterAns
+      ? `<span class="tag-badge tag-${masterAns.tag}">${tagLabel(masterAns.tag)}</span>`
+      : `<span class="tag-badge tag-empty">—</span>`;
 
     tr.appendChild(tdItem);
     tr.appendChild(tdImg);
+    tr.appendChild(tdMaster);
 
-    // One column per tagger
+    // Tagger columns
     allSubmissions.forEach(sub => {
-      const ans = sub.items.find(it => it.index === item.index || it.place_id === item.place_id);
+      const ans = sub.items.find(it => it.place_id === item.place_id);
       const tag = ans?.tag || '';
-      const comment = ans?.comment || '';
+      const isCorrect = masterKey && masterAns && tag === masterAns.tag;
+      const isWrong = masterKey && masterAns && tag && tag !== masterAns.tag;
       const td = document.createElement('td');
-      td.className = 'tagger-col px-3 py-3 border-l align-top text-center';
-      td.innerHTML = `
-        <span class="tag-badge ${tagClass(tag)}">${tagLabel(tag)}</span>
-        ${comment ? `<p class="text-xs text-gray-400 mt-1 text-left leading-tight max-w-xs">${comment}</p>` : ''}
-      `;
+      td.className = 'tagger-col px-3 py-3 border-l align-top text-center ' +
+        (isCorrect ? 'cell-correct' : isWrong ? 'cell-wrong' : '');
+      td.innerHTML = `<span class="tag-badge tag-${tagClass(tag)}">${tagLabel(tag)}</span>` +
+        (ans?.comment ? `<p class="text-xs text-gray-400 mt-1 text-left leading-tight">${ans.comment}</p>` : '');
       tr.appendChild(td);
     });
 
@@ -292,68 +322,98 @@ function renderTable() {
   });
 }
 
-function renderCandidateSummary() {
+function renderCandidateCards() {
   const container = document.getElementById('candidate-cards');
   container.innerHTML = '';
-  allSubmissions.forEach(sub => {
+
+  // Sort by score descending
+  const sorted = [...allSubmissions].sort((a, b) => {
+    const sa = score(a), sb = score(b);
+    return (sb?.pct ?? -1) - (sa?.pct ?? -1);
+  });
+
+  sorted.forEach((sub, rank) => {
+    const sc = score(sub);
     const counts = { ready: 0, design: 0, regenerate: 0, newinput: 0, flagged: 0, empty: 0 };
-    sub.items.forEach(it => {
-      if (it.tag && counts[it.tag] !== undefined) counts[it.tag]++;
-      else if (!it.tag) counts.empty++;
-    });
-    const total = sub.items.length;
-    const tagged = total - counts.empty;
-    const completionPct = Math.round((tagged / total) * 100);
+    sub.items.forEach(it => { if (it.tag && counts[it.tag] !== undefined) counts[it.tag]++; else counts.empty++; });
+    const tagged = sub.items.length - counts.empty;
+    const completionPct = Math.round((tagged / sub.items.length) * 100);
 
     const card = document.createElement('div');
     card.className = 'bg-white rounded-lg border p-4 space-y-3';
     card.innerHTML = `
-      <div class="flex items-start justify-between">
+      <div class="flex items-start justify-between gap-2">
         <div>
-          <p class="font-semibold text-gray-900">${sub.tester_name}</p>
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-bold text-gray-400">#${rank + 1}</span>
+            <p class="font-semibold text-gray-900">${sub.tester_name}</p>
+          </div>
           <p class="text-xs text-gray-400">${sub.submitted_at ? new Date(sub.submitted_at).toLocaleString() : ''}</p>
         </div>
-        <span class="score-chip ${completionPct === 100 ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}">${completionPct}% tagged</span>
+        <div class="text-right flex-shrink-0">
+          ${sc ? `<div class="score-chip text-sm font-bold px-2 py-0.5 ${scoreColor(sc.pct)}">${sc.pct}%</div>
+            <div class="text-xs text-gray-400 mt-0.5">${sc.correct}/${sc.total} correct</div>` :
+            `<div class="score-chip bg-gray-100 text-gray-400">No key</div>`}
+        </div>
       </div>
-      <div class="w-full bg-gray-100 rounded-full h-1.5">
-        <div class="h-1.5 rounded-full bg-blue-500" style="width:${completionPct}%"></div>
-      </div>
-      <div class="grid grid-cols-3 gap-2 text-center">
-        <div><p class="text-xs text-gray-400">Ready</p><p class="font-semibold text-green-600">${counts.ready}</p></div>
-        <div><p class="text-xs text-gray-400">Design</p><p class="font-semibold text-purple-600">${counts.design}</p></div>
-        <div><p class="text-xs text-gray-400">Regen</p><p class="font-semibold text-yellow-600">${counts.regenerate}</p></div>
-        <div><p class="text-xs text-gray-400">New Input</p><p class="font-semibold text-blue-600">${counts.newinput}</p></div>
-        <div><p class="text-xs text-gray-400">Flag</p><p class="font-semibold text-red-600">${counts.flagged}</p></div>
-        <div><p class="text-xs text-gray-400">Untagged</p><p class="font-semibold text-gray-400">${counts.empty}</p></div>
-      </div>
-    `;
+      ${sc ? `<div class="w-full bg-gray-100 rounded-full h-1.5">
+        <div class="h-1.5 rounded-full ${sc.pct >= 80 ? 'bg-green-500' : sc.pct >= 60 ? 'bg-yellow-400' : 'bg-red-400'}" style="width:${sc.pct}%"></div>
+      </div>` : ''}
+      <div class="grid grid-cols-3 gap-1.5 text-center text-xs">
+        <div class="bg-gray-50 rounded p-1.5"><p class="text-gray-400">Tagged</p><p class="font-semibold">${tagged}/${sub.items.length}</p></div>
+        <div class="bg-green-50 rounded p-1.5"><p class="text-gray-400">Ready</p><p class="font-semibold text-green-600">${counts.ready}</p></div>
+        <div class="bg-purple-50 rounded p-1.5"><p class="text-gray-400">Design</p><p class="font-semibold text-purple-600">${counts.design}</p></div>
+        <div class="bg-yellow-50 rounded p-1.5"><p class="text-gray-400">Regen</p><p class="font-semibold text-yellow-600">${counts.regenerate}</p></div>
+        <div class="bg-blue-50 rounded p-1.5"><p class="text-gray-400">New Input</p><p class="font-semibold text-blue-600">${counts.newinput}</p></div>
+        <div class="bg-red-50 rounded p-1.5"><p class="text-gray-400">Flag</p><p class="font-semibold text-red-600">${counts.flagged}</p></div>
+      </div>`;
     container.appendChild(card);
   });
 }
 
-// ─── EXPORT ──────────────────────────────────────────────────────────────────
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+function tagClass(tag) {
+  const map = { ready: 'ready', design: 'design', regenerate: 'regenerate', newinput: 'newinput', flagged: 'flagged' };
+  return map[tag] || 'empty';
+}
+function tagLabel(tag) {
+  const map = { ready: 'Ready', design: 'Design', regenerate: 'Regen', newinput: 'New Input', flagged: 'Flag' };
+  return map[tag] || (tag || '—');
+}
+
+// ─── EXPORT ───────────────────────────────────────────────────────────────────
 function exportCSV() {
-  if (!allSubmissions.length) { alert('No data to export.'); return; }
+  if (!allSubmissions.length) { alert('No submissions to export.'); return; }
   const template = allSubmissions[0].items;
   const taggers = allSubmissions.map(s => s.tester_name);
+  const scores = allSubmissions.map(s => score(s));
 
-  const headerRow = ['#', 'place_id', 'place_name', ...taggers.flatMap(t => [t + '_tag', t + '_comment'])];
+  const headerRow = ['#', 'place_id', 'place_name', 'answer_key', ...taggers.flatMap(t => [t + '_tag', t + '_comment', t + '_correct'])];
   const rows = template.map((item, idx) => {
-    const row = [idx + 1, item.place_id, item.place_name || ''];
+    const masterAns = masterKey?.[item.place_id]?.tag || '';
+    const row = [idx + 1, item.place_id, item.place_name || '', masterAns];
     allSubmissions.forEach(sub => {
-      const ans = sub.items.find(it => it.index === item.index || it.place_id === item.place_id);
-      row.push(ans?.tag || '', ans?.comment || '');
+      const ans = sub.items.find(it => it.place_id === item.place_id);
+      const tag = ans?.tag || '';
+      row.push(tag, ans?.comment || '', masterAns ? (tag === masterAns ? '1' : '0') : '');
     });
     return row;
   });
 
-  const csv = [headerRow, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+  // Score summary row
+  const summaryRow = ['', '', 'SCORE', '', ...allSubmissions.flatMap((sub, i) => {
+    const sc = scores[i];
+    return [sc ? `${sc.correct}/${sc.total} (${sc.pct}%)` : '', '', ''];
+  })];
+
+  const csv = [headerRow, summaryRow, ...rows]
+    .map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
   const blob = new Blob([csv], { type: 'text/csv' });
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
   a.download = 'ponto_tagger_test_results.csv'; a.click();
 }
 
-// ─── LIGHTBOX ────────────────────────────────────────────────────────────────
+// ─── LIGHTBOX ─────────────────────────────────────────────────────────────────
 function openLightbox(url) {
   document.getElementById('lightbox-img').src = url;
   document.getElementById('lightbox').classList.add('open');
@@ -363,36 +423,6 @@ function closeLightbox() {
   document.getElementById('lightbox-img').src = '';
 }
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
-
-// ─── DEMO DATA for testing the viewer layout ──────────────────────────────────
-// Uncomment the block below to preview the results viewer with fake data
-/*
-allSubmissions = [
-  {
-    tester_name: "Jane Smith",
-    submitted_at: new Date().toISOString(),
-    items: Array.from({length: 30}, (_, i) => ({
-      index: i+1, place_id: "item_" + String(i+1).padStart(3,'0'),
-      place_name: "Sample Place " + (i+1), address: "123 Main St",
-      input_url: "https://placehold.co/600x400/e2e8f0/64748b?text=Input+" + (i+1),
-      output_url: "https://placehold.co/600x400/dbeafe/3b82f6?text=Output+" + (i+1),
-      tag: ["ready","design","regenerate","newinput","flagged"][i % 5], comment: ""
-    }))
-  },
-  {
-    tester_name: "John Doe",
-    submitted_at: new Date().toISOString(),
-    items: Array.from({length: 30}, (_, i) => ({
-      index: i+1, place_id: "item_" + String(i+1).padStart(3,'0'),
-      place_name: "Sample Place " + (i+1), address: "123 Main St",
-      input_url: "https://placehold.co/600x400/e2e8f0/64748b?text=Input+" + (i+1),
-      output_url: "https://placehold.co/600x400/dbeafe/3b82f6?text=Output+" + (i+1),
-      tag: ["regenerate","ready","flagged","design","newinput"][i % 5], comment: i % 3 === 0 ? "Looks similar to input" : ""
-    }))
-  }
-];
-render();
-*/
 </script>
 </body>
 </html>
