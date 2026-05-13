@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ponto Tagger Test — Admin</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    body { font-family: 'Inter', system-ui, sans-serif; background: #f8fafc; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; border-radius: 0.375rem; font-size: 0.8rem; font-weight: 500; padding: 0.4rem 0.875rem; cursor: pointer; border: 1px solid transparent; transition: all 0.15s; gap: 0.375rem; }
+    .btn-primary { background: hsl(221,83%,53%); color: white; }
+    .btn-primary:hover { background: hsl(221,83%,45%); }
+    .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-outline { background: white; color: #1e293b; border-color: #e2e8f0; }
+    .btn-outline:hover { background: #f8fafc; }
+    .btn-destructive { background: #ef4444; color: white; }
+    .btn-destructive:hover { background: #dc2626; }
+    .btn-success { background: #22c55e; color: white; }
+    .btn-success:hover { background: #16a34a; }
+    input[type="text"], input[type="password"], input[type="url"] {
+      border: 1px solid #e2e8f0; border-radius: 0.375rem; padding: 0.4rem 0.625rem;
+      font-size: 0.8rem; font-family: inherit; outline: none;
+    }
+    input:focus { border-color: hsl(221,83%,53%); box-shadow: 0 0 0 2px hsl(221,83%,53%,0.15); }
+    .tag-btn {
+      padding: 0.2rem 0.6rem; border-radius: 9999px; font-size: 0.7rem; font-weight: 600;
+      cursor: pointer; border: 2px solid transparent; transition: all 0.1s; white-space: nowrap;
+    }
+    .tag-btn.active { border-color: currentColor; }
+    .tag-ready    { background: #dcfce7; color: #15803d; }
+    .tag-design   { background: #f3e8ff; color: #7e22ce; }
+    .tag-regen    { background: #fef9c3; color: #a16207; }
+    .tag-newinput { background: #dbeafe; color: #1d4ed8; }
+    .tag-flagged  { background: #fee2e2; color: #b91c1c; }
+    .tag-empty    { background: #f1f5f9; color: #94a3b8; }
+    .item-row { border-bottom: 1px solid #f1f5f9; }
+    .item-row:last-child { border-bottom: none; }
+    .item-img { width: 80px; height: 60px; object-fit: cover; border-radius: 4px; border: 1px solid #e2e8f0; cursor: pointer; flex-shrink: 0; }
+    .item-img:hover { opacity: 0.8; }
+    .spinner { width: 1.25rem; height: 1.25rem; border: 2px solid #e2e8f0; border-top-color: hsl(221,83%,53%); border-radius: 50%; animation: spin 0.7s linear infinite; display: inline-block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .screen { display: none; }
+    .screen.active { display: block; }
+    .lightbox { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 100; align-items: center; justify-content: center; flex-direction: column; gap: 1rem; }
+    .lightbox.open { display: flex; }
+    .lightbox img { max-width: 90vw; max-height: 85vh; border-radius: 0.5rem; object-fit: contain; }
+    .toast { position: fixed; bottom: 1.5rem; right: 1.5rem; background: white; border: 1px solid #e2e8f0; border-radius: 0.5rem; padding: 0.75rem 1rem; box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); font-size: 0.8rem; font-weight: 500; z-index: 99; animation: slideIn 0.2s ease; }
+    .toast.success { border-left: 4px solid #22c55e; }
+    .toast.error   { border-left: 4px solid #ef4444; }
+    @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+  </style>
+</head>
+<body>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <img id="lightbox-img" src="" alt="" />
+  <p class="text-white text-xs opacity-60">Click anywhere to close</p>
+</div>
+
+<!-- SCREEN: Login -->
+<div id="screen-login" class="screen active">
+  <div class="max-w-sm mx-auto px-6 py-24 space-y-4">
+    <div class="text-center mb-6">
+      <h1 class="text-xl font-bold text-gray-900">Admin Panel</h1>
+      <p class="text-sm text-gray-500 mt-1">Ponto Tagger Test</p>
+    </div>
+    <div class="bg-white border border-gray-200 rounded-lg p-6 space-y-4">
+      <div class="space-y-1.5">
+        <label class="text-sm font-medium text-gray-700">Passphrase</label>
+        <input type="password" id="passphrase-input" class="w-full" placeholder="Enter passphrase"
+          onkeydown="if(event.key==='Enter') login()" />
+        <p id="login-error" class="text-xs text-red-500 hidden">Incorrect passphrase.</p>
+      </div>
+      <button class="btn btn-primary w-full" onclick="login()">Unlock →</button>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN: Admin -->
+<div id="screen-admin" class="screen">
+  <div class="max-w-5xl mx-auto px-6 py-6 space-y-6">
+
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-xl font-bold text-gray-900">Admin Panel</h1>
+        <p class="text-sm text-gray-500">Edit master answer key · Swap test places</p>
+      </div>
+      <div class="flex gap-2">
+        <a href="results.html" class="btn btn-outline">Results Viewer</a>
+        <a href="index.html" class="btn btn-outline">Test Page</a>
+      </div>
+    </div>
+
+    <!-- Apps Script URL -->
+    <div class="bg-white border border-gray-200 rounded-lg p-4 space-y-2">
+      <p class="text-sm font-medium text-gray-700">Apps Script URL</p>
+      <div class="flex gap-2">
+        <input type="url" id="admin-script-url" class="flex-1" placeholder="https://script.google.com/macros/s/.../exec" />
+        <button class="btn btn-primary whitespace-nowrap" onclick="loadAll()">Load</button>
+      </div>
+      <p id="load-error" class="text-xs text-red-500 hidden"></p>
+    </div>
+
+    <!-- SECTION: Master Key Editor -->
+    <div class="bg-white border border-gray-200 rounded-lg">
+      <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+        <div>
+          <h2 class="font-semibold text-gray-900">Master Answer Key</h2>
+          <p class="text-xs text-gray-500 mt-0.5">Click a tag to change the answer. Save when done.</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <span id="master-status-chip" class="text-xs text-gray-400"></span>
+          <button class="btn btn-success" id="save-master-btn" onclick="saveMasterKey()" disabled>Save Answer Key</button>
+        </div>
+      </div>
+      <div id="master-list" class="divide-y divide-gray-50 px-2">
+        <div class="py-8 text-center text-sm text-gray-400">Load data above to edit answers.</div>
+      </div>
+    </div>
+
+    <!-- SECTION: Place Swap -->
+    <div class="bg-white border border-gray-200 rounded-lg">
+      <div class="px-5 py-4 border-b border-gray-100">
+        <h2 class="font-semibold text-gray-900">Swap a Test Place</h2>
+        <p class="text-xs text-gray-500 mt-0.5">Enter a place ID from the production tool and a fresh API token to fetch its images, then replace a slot.</p>
+      </div>
+      <div class="px-5 py-4 space-y-3">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div class="space-y-1.5">
+            <label class="text-xs font-medium text-gray-600">New Place ID</label>
+            <input type="text" id="new-place-id" class="w-full font-mono text-xs" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" />
+          </div>
+          <div class="space-y-1.5">
+            <label class="text-xs font-medium text-gray-600">Replace slot # (1–42)</label>
+            <input type="text" id="replace-slot" class="w-full" placeholder="e.g. 31" />
+          </div>
+        </div>
+        <div class="space-y-1.5">
+          <label class="text-xs font-medium text-gray-600">Ponto API Bearer Token <span class="text-gray-400">(from browser devtools, expires in ~1hr)</span></label>
+          <input type="text" id="api-token" class="w-full font-mono text-xs" placeholder="eyJhbGci..." />
+        </div>
+        <div class="flex gap-2">
+          <button class="btn btn-outline" onclick="fetchNewPlace()">
+            <span id="fetch-spinner" class="hidden spinner"></span>
+            Fetch Place
+          </button>
+        </div>
+
+        <!-- Preview -->
+        <div id="place-preview" class="hidden border border-gray-200 rounded-lg p-4 space-y-3">
+          <p class="text-sm font-semibold text-gray-800" id="preview-name"></p>
+          <p class="text-xs text-gray-500" id="preview-address"></p>
+          <div class="flex gap-3">
+            <div class="space-y-1">
+              <p class="text-xs text-gray-400">Input</p>
+              <img id="preview-input" class="item-img w-32 h-24" src="" onclick="openLightbox(this.src)" />
+            </div>
+            <div class="space-y-1">
+              <p class="text-xs text-gray-400">Output</p>
+              <img id="preview-output" class="item-img w-32 h-24" src="" onclick="openLightbox(this.src)" />
+            </div>
+          </div>
+          <div class="flex gap-2 items-center">
+            <p class="text-xs text-gray-500">Replacing slot <strong id="preview-slot"></strong>:</p>
+            <span class="text-xs text-gray-400" id="preview-replacing"></span>
+          </div>
+          <button class="btn btn-destructive" onclick="confirmSwap()">Confirm Swap</button>
+        </div>
+        <p id="swap-error" class="text-xs text-red-500 hidden"></p>
+        <p id="swap-success" class="text-xs text-green-600 hidden"></p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const PASSPHRASE   = 'poiMaster';
+const SCRIPT_URL_KEY = 'ponto_script_url';
+const PONTO_API    = 'https://ponto-api-production-454568860704.us-west1.run.app';
+
+const STATUS_LABELS = { ready: 'Ready', design: 'Design', regenerate: 'Regen', newinput: 'New Input', flagged: 'Flag' };
+const STATUS_KEYS   = ['ready', 'design', 'regenerate', 'newinput', 'flagged'];
+const TAG_CLASS     = { ready: 'tag-ready', design: 'tag-design', regenerate: 'tag-regen', newinput: 'tag-newinput', flagged: 'tag-flagged' };
+
+let scriptUrl = localStorage.getItem(SCRIPT_URL_KEY) || '';
+let masterData = {};   // { place_id: { tag, comment } }
+let itemsList  = [];   // ordered list from index.html ITEMS
+let pendingSwap = null;
+
+// ─── LOGIN ────────────────────────────────────────────────────────────────────
+function login() {
+  const val = document.getElementById('passphrase-input').value;
+  if (val !== PASSPHRASE) {
+    document.getElementById('login-error').classList.remove('hidden');
+    return;
+  }
+  document.getElementById('screen-login').classList.remove('active');
+  document.getElementById('screen-admin').classList.add('active');
+  if (scriptUrl) {
+    document.getElementById('admin-script-url').value = scriptUrl;
+    loadAll();
+  }
+}
+document.getElementById('passphrase-input').addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
+
+// ─── LOAD ─────────────────────────────────────────────────────────────────────
+async function loadAll() {
+  const url = document.getElementById('admin-script-url').value.trim();
+  const errEl = document.getElementById('load-error');
+  errEl.classList.add('hidden');
+  if (!url) { errEl.textContent = 'Enter the Apps Script URL.'; errEl.classList.remove('hidden'); return; }
+  scriptUrl = url;
+  localStorage.setItem(SCRIPT_URL_KEY, url);
+
+  try {
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const data = await resp.json();
+    masterData = data.master || {};
+
+    // Also load the ITEMS from index.html embedded in this page's origin
+    await loadItemsList();
+    renderMasterList();
+  } catch(e) {
+    errEl.textContent = 'Failed: ' + e.message;
+    errEl.classList.remove('hidden');
+  }
+}
+
+// Fetch the sibling index.html and parse ITEMS out of it
+async function loadItemsList() {
+  try {
+    const resp = await fetch('index.html');
+    const html = await resp.text();
+    const matches = [...html.matchAll(/\{\s*id:\s*"([^"]+)".*?name:\s*"([^"]+)".*?address:\s*"([^"]+)".*?inputLink:\s*"([^"]+)".*?outputLink:\s*"([^"]+)"/g)];
+    itemsList = matches.map((m, i) => ({
+      index: i + 1,
+      place_id:   m[1],
+      name:       m[2],
+      address:    m[3],
+      input_url:  m[4],
+      output_url: m[5],
+    }));
+  } catch(e) {
+    console.warn('Could not parse index.html items:', e);
+  }
+}
+
+// ─── MASTER KEY EDITOR ────────────────────────────────────────────────────────
+function renderMasterList() {
+  const container = document.getElementById('master-list');
+  container.innerHTML = '';
+
+  if (!itemsList.length) {
+    container.innerHTML = '<div class="py-6 text-center text-sm text-gray-400">Could not load items from index.html.</div>';
+    return;
+  }
+
+  const tagged = Object.values(masterData).filter(v => v.tag).length;
+  document.getElementById('master-status-chip').textContent = `${tagged} / ${itemsList.length} tagged`;
+  document.getElementById('save-master-btn').disabled = false;
+
+  itemsList.forEach(item => {
+    const current = masterData[item.place_id]?.tag || '';
+    const div = document.createElement('div');
+    div.className = 'item-row flex items-center gap-3 py-3 px-3';
+    div.innerHTML = `
+      <span class="text-xs text-gray-400 w-5 flex-shrink-0 text-right">${item.index}</span>
+      <img class="item-img" src="${item.input_url}" title="Input" onclick="openLightbox('${item.input_url}')" onerror="this.style.display='none'" />
+      <img class="item-img" src="${item.output_url}" title="Output" onclick="openLightbox('${item.output_url}')" onerror="this.style.display='none'" />
+      <div class="flex-1 min-w-0">
+        <p class="text-xs font-medium text-gray-800 truncate">${item.name}</p>
+        <p class="text-xs text-gray-400 truncate">${item.address}</p>
+      </div>
+      <div class="flex gap-1.5 flex-wrap justify-end" id="tags-${item.place_id}">
+        ${STATUS_KEYS.map(s => `
+          <button class="tag-btn ${TAG_CLASS[s]} ${current === s ? 'active' : ''}"
+            onclick="setTag('${item.place_id}', '${s}')">
+            ${STATUS_LABELS[s]}
+          </button>`).join('')}
+      </div>
+    `;
+    container.appendChild(div);
+  });
+}
+
+function setTag(placeId, tag) {
+  if (!masterData[placeId]) masterData[placeId] = { tag: '', comment: '' };
+  masterData[placeId].tag = tag;
+
+  // Re-render just the tag buttons for this row
+  const container = document.getElementById('tags-' + placeId);
+  container.innerHTML = STATUS_KEYS.map(s => `
+    <button class="tag-btn ${TAG_CLASS[s]} ${tag === s ? 'active' : ''}"
+      onclick="setTag('${placeId}', '${s}')">
+      ${STATUS_LABELS[s]}
+    </button>`).join('');
+
+  const tagged = Object.values(masterData).filter(v => v.tag).length;
+  document.getElementById('master-status-chip').textContent = `${tagged} / ${itemsList.length} tagged`;
+}
+
+async function saveMasterKey() {
+  const btn = document.getElementById('save-master-btn');
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+  try {
+    const items = itemsList.map(item => ({
+      place_id: item.place_id,
+      tag:      masterData[item.place_id]?.tag || '',
+      comment:  masterData[item.place_id]?.comment || '',
+    }));
+    const resp = await fetch(scriptUrl, {
+      method: 'POST', mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'saveMaster', items }),
+    });
+    showToast('Answer key saved ✓', 'success');
+  } catch(e) {
+    showToast('Save failed: ' + e.message, 'error');
+  }
+  btn.disabled = false;
+  btn.textContent = 'Save Answer Key';
+}
+
+// ─── PLACE SWAP ───────────────────────────────────────────────────────────────
+async function fetchNewPlace() {
+  const placeId = document.getElementById('new-place-id').value.trim();
+  const token   = document.getElementById('api-token').value.trim();
+  const slot    = parseInt(document.getElementById('replace-slot').value.trim());
+  const errEl   = document.getElementById('swap-error');
+  errEl.classList.add('hidden');
+  document.getElementById('swap-success').classList.add('hidden');
+  document.getElementById('place-preview').classList.add('hidden');
+
+  if (!placeId) { errEl.textContent = 'Enter a place ID.'; errEl.classList.remove('hidden'); return; }
+  if (!token)   { errEl.textContent = 'Enter an API token.'; errEl.classList.remove('hidden'); return; }
+  if (!slot || slot < 1 || slot > 99) { errEl.textContent = 'Enter a valid slot number.'; errEl.classList.remove('hidden'); return; }
+
+  const spinner = document.getElementById('fetch-spinner');
+  spinner.classList.remove('hidden');
+
+  try {
+    const resp = await fetch(`${PONTO_API}/places/${placeId}`, {
+      headers: { authorization: 'Bearer ' + token, accept: 'application/json' }
+    });
+    if (!resp.ok) throw new Error('API returned ' + resp.status + '. Token may be expired.');
+    const p = await resp.json();
+    if (!p.name) throw new Error('Place not found.');
+    if (!p.inputLink || !p.outputLink) throw new Error('Place has no images.');
+
+    const addr = (p.address || '').replace(/^.*?\\n/, '').trim();
+    pendingSwap = {
+      index:      slot,
+      place_id:   p.id,
+      name:       p.name,
+      address:    addr,
+      input_url:  p.inputLink,
+      output_url: p.outputLink,
+    };
+
+    document.getElementById('preview-name').textContent    = p.name;
+    document.getElementById('preview-address').textContent = addr;
+    document.getElementById('preview-input').src           = p.inputLink;
+    document.getElementById('preview-output').src          = p.outputLink;
+    document.getElementById('preview-slot').textContent    = slot;
+
+    const existing = itemsList.find(i => i.index === slot);
+    document.getElementById('preview-replacing').textContent = existing ? existing.name : '(new slot)';
+    document.getElementById('place-preview').classList.remove('hidden');
+
+  } catch(e) {
+    errEl.textContent = e.message;
+    errEl.classList.remove('hidden');
+  }
+  spinner.classList.add('hidden');
+}
+
+async function confirmSwap() {
+  if (!pendingSwap) return;
+  const errEl = document.getElementById('swap-error');
+  const okEl  = document.getElementById('swap-success');
+  errEl.classList.add('hidden');
+  okEl.classList.add('hidden');
+
+  try {
+    await fetch(scriptUrl, {
+      method: 'POST', mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'updatePlace', place: pendingSwap }),
+    });
+    okEl.textContent = `Slot ${pendingSwap.index} updated to "${pendingSwap.name}" in the sheet. Remember to also update index.html in the repo.`;
+    okEl.classList.remove('hidden');
+    document.getElementById('place-preview').classList.add('hidden');
+    showToast('Place logged in sheet ✓', 'success');
+    pendingSwap = null;
+  } catch(e) {
+    errEl.textContent = 'Failed: ' + e.message;
+    errEl.classList.remove('hidden');
+  }
+}
+
+// ─── UTILS ───────────────────────────────────────────────────────────────────
+function openLightbox(url) {
+  document.getElementById('lightbox-img').src = url;
+  document.getElementById('lightbox').classList.add('open');
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('open');
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
+
+function showToast(msg, type = 'success') {
+  const t = document.createElement('div');
+  t.className = 'toast ' + type;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+</script>
+</body>
+</html>

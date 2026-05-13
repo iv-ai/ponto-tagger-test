@@ -1,78 +1,76 @@
 // Ponto Tagger Test — Google Apps Script
 // Deploy as: Web App → Execute as Me → Anyone can access
 //
-// After deploying, copy the Web App URL into index.html → APPS_SCRIPT_URL
+// POST actions (sent as JSON with an "action" field):
+//   action: "submit"       — candidate submission (or poiMaster answer key)
+//   action: "saveMaster"   — admin overwrites master key answers
+//   action: "updatePlace"  — admin swaps a place entry in the Places sheet
 //
-// Special rule: if tester_name === 'poiMaster', the submission is saved to
-// the "Master" sheet and used as the answer key for scoring all other submissions.
+// GET  — returns { master, submissions, places }
 
-const SHEET_NAME = 'Submissions';
+const SHEET_NAME        = 'Submissions';
 const MASTER_SHEET_NAME = 'Master';
+const PLACES_SHEET_NAME = 'Places';
+
+// ─── ROUTER ──────────────────────────────────────────────────────────────────
 
 function doPost(e) {
   try {
     const payload = JSON.parse(e.postData.contents);
     const ss = SpreadsheetApp.getActiveSpreadsheet();
 
+    if (payload.action === 'saveMaster') {
+      saveMaster(ss, payload.items);
+      return ok({ saved: true });
+    }
+
+    if (payload.action === 'updatePlace') {
+      updatePlace(ss, payload.place);
+      return ok({ saved: true });
+    }
+
+    // Default: candidate submission
     if (payload.tester_name === 'poiMaster') {
-      saveMaster(ss, payload);
-      return ContentService
-        .createTextOutput(JSON.stringify({ success: true, master: true }))
-        .setMimeType(ContentService.MimeType.JSON);
+      saveMaster(ss, payload.items.map(i => ({ place_id: i.place_id, tag: i.tag, comment: i.comment })));
+      return ok({ master: true });
     }
 
     saveSubmission(ss, payload);
-    return ContentService
-      .createTextOutput(JSON.stringify({ success: true }))
-      .setMimeType(ContentService.MimeType.JSON);
+    return ok({ submitted: true });
 
   } catch (err) {
-    return ContentService
-      .createTextOutput(JSON.stringify({ success: false, error: err.message }))
-      .setMimeType(ContentService.MimeType.JSON);
+    return error(err.message);
   }
 }
 
-// GET /  →  returns all submissions + master answer key as JSON
-// Used by results.html to load live data
 function doGet(e) {
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const result = {
-      master: getMaster(ss),
+    return ok({
+      master:      getMaster(ss),
       submissions: getSubmissions(ss),
-    };
-    return ContentService
-      .createTextOutput(JSON.stringify(result))
-      .setMimeType(ContentService.MimeType.JSON);
+      places:      getPlaces(ss),
+    });
   } catch (err) {
-    return ContentService
-      .createTextOutput(JSON.stringify({ error: err.message }))
-      .setMimeType(ContentService.MimeType.JSON);
+    return error(err.message);
   }
 }
 
 // ─── MASTER ──────────────────────────────────────────────────────────────────
 
-function saveMaster(ss, payload) {
+function saveMaster(ss, items) {
   let sheet = ss.getSheetByName(MASTER_SHEET_NAME);
-  if (!sheet) {
-    sheet = ss.insertSheet(MASTER_SHEET_NAME);
-  } else {
-    sheet.clearContents();
-  }
-  // Store as two columns: place_id, tag
+  if (!sheet) sheet = ss.insertSheet(MASTER_SHEET_NAME);
+  else sheet.clearContents();
+
   sheet.getRange(1, 1, 1, 3).setValues([['place_id', 'tag', 'comment']]);
   sheet.getRange(1, 1, 1, 3).setFontWeight('bold').setBackground('#fef9c3');
   sheet.setFrozenRows(1);
 
-  const rows = payload.items.map(item => [
-    item.place_id || '',
-    item.tag || '',
-    item.comment || '',
-  ]);
-  if (rows.length) {
-    sheet.getRange(2, 1, rows.length, 3).setValues(rows);
+  if (items.length) {
+    sheet.getRange(2, 1, items.length, 3).setValues(
+      items.map(i => [i.place_id || '', i.tag || '', i.comment || ''])
+    );
   }
 }
 
@@ -88,6 +86,46 @@ function getMaster(ss) {
   return master;
 }
 
+// ─── PLACES ──────────────────────────────────────────────────────────────────
+
+function updatePlace(ss, place) {
+  let sheet = ss.getSheetByName(PLACES_SHEET_NAME);
+  if (!sheet) {
+    sheet = ss.insertSheet(PLACES_SHEET_NAME);
+    sheet.getRange(1, 1, 1, 6).setValues([['index', 'place_id', 'name', 'address', 'input_url', 'output_url']]);
+    sheet.getRange(1, 1, 1, 6).setFontWeight('bold').setBackground('#f1f5f9');
+    sheet.setFrozenRows(1);
+  }
+
+  const data = sheet.getDataRange().getValues();
+  // Try to find existing row by place_id or index
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0] == place.index || data[i][1] === place.place_id) {
+      sheet.getRange(i + 1, 1, 1, 6).setValues([[
+        place.index, place.place_id, place.name, place.address, place.input_url, place.output_url
+      ]]);
+      return;
+    }
+  }
+  // Not found — append
+  sheet.appendRow([place.index, place.place_id, place.name, place.address, place.input_url, place.output_url]);
+}
+
+function getPlaces(ss) {
+  const sheet = ss.getSheetByName(PLACES_SHEET_NAME);
+  if (!sheet) return [];
+  const data = sheet.getDataRange().getValues();
+  if (data.length < 2) return [];
+  return data.slice(1).map(row => ({
+    index:      row[0],
+    place_id:   row[1],
+    name:       row[2],
+    address:    row[3],
+    input_url:  row[4],
+    output_url: row[5],
+  }));
+}
+
 // ─── SUBMISSIONS ─────────────────────────────────────────────────────────────
 
 function saveSubmission(ss, payload) {
@@ -96,9 +134,7 @@ function saveSubmission(ss, payload) {
     sheet = ss.insertSheet(SHEET_NAME);
     const headers = buildHeaders(payload.items.length);
     sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
-    sheet.getRange(1, 1, 1, headers.length)
-      .setFontWeight('bold')
-      .setBackground('#f1f5f9');
+    sheet.getRange(1, 1, 1, headers.length).setFontWeight('bold').setBackground('#f1f5f9');
     sheet.setFrozenRows(1);
   }
   sheet.appendRow(buildRow(payload));
@@ -109,33 +145,26 @@ function getSubmissions(ss) {
   if (!sheet) return [];
   const data = sheet.getDataRange().getValues();
   if (data.length < 2) return [];
-
   const headers = data[0];
   return data.slice(1).map(row => {
     const obj = {};
     headers.forEach((h, i) => { obj[h] = row[i]; });
-
-    // Reconstruct items array from flat columns
     const items = [];
     let i = 1;
     while (obj['item_' + i + '_place_id'] !== undefined) {
       items.push({
-        index: i,
-        place_id: obj['item_' + i + '_place_id'],
+        index:      i,
+        place_id:   obj['item_' + i + '_place_id'],
         place_name: obj['item_' + i + '_place_name'],
-        address: obj['item_' + i + '_address'],
-        input_url: obj['item_' + i + '_input_url'],
+        address:    obj['item_' + i + '_address'],
+        input_url:  obj['item_' + i + '_input_url'],
         output_url: obj['item_' + i + '_output_url'],
-        tag: obj['item_' + i + '_tag'],
-        comment: obj['item_' + i + '_comment'],
+        tag:        obj['item_' + i + '_tag'],
+        comment:    obj['item_' + i + '_comment'],
       });
       i++;
     }
-    return {
-      tester_name: obj.tester_name,
-      submitted_at: obj.submitted_at,
-      items,
-    };
+    return { tester_name: obj.tester_name, submitted_at: obj.submitted_at, items };
   });
 }
 
@@ -143,34 +172,32 @@ function getSubmissions(ss) {
 
 function buildHeaders(itemCount) {
   const base = ['tester_name', 'submitted_at'];
-  const itemCols = [];
+  const cols = [];
   for (let i = 1; i <= itemCount; i++) {
-    itemCols.push(
-      `item_${i}_place_id`,
-      `item_${i}_place_name`,
-      `item_${i}_address`,
-      `item_${i}_input_url`,
-      `item_${i}_output_url`,
-      `item_${i}_tag`,
-      `item_${i}_comment`
-    );
+    cols.push(`item_${i}_place_id`, `item_${i}_place_name`, `item_${i}_address`,
+              `item_${i}_input_url`, `item_${i}_output_url`, `item_${i}_tag`, `item_${i}_comment`);
   }
-  return [...base, ...itemCols];
+  return [...base, ...cols];
 }
 
 function buildRow(payload) {
   const base = [payload.tester_name, payload.submitted_at];
-  const itemCols = [];
+  const cols = [];
   payload.items.forEach(item => {
-    itemCols.push(
-      item.place_id || '',
-      item.place_name || '',
-      item.address || '',
-      item.input_url || '',
-      item.output_url || '',
-      item.tag || '',
-      item.comment || ''
-    );
+    cols.push(item.place_id||'', item.place_name||'', item.address||'',
+              item.input_url||'', item.output_url||'', item.tag||'', item.comment||'');
   });
-  return [...base, ...itemCols];
+  return [...base, ...cols];
+}
+
+function ok(data) {
+  return ContentService
+    .createTextOutput(JSON.stringify({ success: true, ...data }))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function error(msg) {
+  return ContentService
+    .createTextOutput(JSON.stringify({ success: false, error: msg }))
+    .setMimeType(ContentService.MimeType.JSON);
 }
