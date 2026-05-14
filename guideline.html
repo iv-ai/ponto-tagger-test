@@ -298,14 +298,14 @@
     <div>
       <p class="text-xs text-blue-400 font-semibold uppercase tracking-widest mb-1">Quick check</p>
       <h2 class="text-2xl font-bold text-white">Let's make sure you've got it</h2>
-      <p class="text-slate-400 text-sm mt-1">Answer all 3 questions correctly to unlock the test.</p>
+      <p class="text-slate-400 text-sm mt-1">Answer all 7 questions correctly to unlock the test. Wrong answers show the correct one — read and retry.</p>
     </div>
 
     <div class="space-y-8" id="quiz-container">
 
       <!-- Q1 -->
-      <div class="quiz-question" data-q="0" data-answer="1">
-        <p class="text-sm font-semibold text-white mb-3">1. The output image looks exactly like the input — same cars, same people, same sky. What do you tag it?</p>
+      <div class="quiz-question" data-q="0">
+        <p class="text-sm font-semibold text-white mb-3">1. The output image looks almost identical to the input — same cars, same people, same lighting. What do you tag it?</p>
         <div class="space-y-2">
           <div class="quiz-opt" onclick="selectAnswer(0, 0, this)">Ready</div>
           <div class="quiz-opt" onclick="selectAnswer(0, 1, this)">Regenerate</div>
@@ -316,8 +316,8 @@
       </div>
 
       <!-- Q2 -->
-      <div class="quiz-question" data-q="1" data-answer="2">
-        <p class="text-sm font-semibold text-white mb-3">2. The output looks great but the store's sign is missing — you can see a blank wall where the logo should be. What do you tag it?</p>
+      <div class="quiz-question" data-q="1">
+        <p class="text-sm font-semibold text-white mb-3">2. The output looks great overall, but the store's sign is missing — there's a blank wall where the logo should be. What do you tag it?</p>
         <div class="space-y-2">
           <div class="quiz-opt" onclick="selectAnswer(1, 0, this)">Ready</div>
           <div class="quiz-opt" onclick="selectAnswer(1, 1, this)">Regenerate</div>
@@ -328,7 +328,7 @@
       </div>
 
       <!-- Q3 -->
-      <div class="quiz-question" data-q="2" data-answer="1">
+      <div class="quiz-question" data-q="2">
         <p class="text-sm font-semibold text-white mb-3">3. The input photo shows a close-up of a bowl of ramen — not the restaurant exterior at all. What do you tag it?</p>
         <div class="space-y-2">
           <div class="quiz-opt" onclick="selectAnswer(2, 0, this)">Ready</div>
@@ -339,9 +339,58 @@
         <p class="quiz-feedback hidden text-sm mt-2 font-medium"></p>
       </div>
 
+      <!-- Q4 -->
+      <div class="quiz-question" data-q="3">
+        <p class="text-sm font-semibold text-white mb-3">4. The location is a dental clinic. The output image looks fine. What do you tag it?</p>
+        <div class="space-y-2">
+          <div class="quiz-opt" onclick="selectAnswer(3, 0, this)">Ready</div>
+          <div class="quiz-opt" onclick="selectAnswer(3, 1, this)">Needs Design Review</div>
+          <div class="quiz-opt" onclick="selectAnswer(3, 2, this)">Regenerate</div>
+          <div class="quiz-opt" onclick="selectAnswer(3, 3, this)">Flag</div>
+        </div>
+        <p class="quiz-feedback hidden text-sm mt-2 font-medium"></p>
+      </div>
+
+      <!-- Q5 -->
+      <div class="quiz-question" data-q="4">
+        <p class="text-sm font-semibold text-white mb-3">5. The output image has a large sofa floating in front of the storefront in a physically impossible way. What do you tag it?</p>
+        <div class="space-y-2">
+          <div class="quiz-opt" onclick="selectAnswer(4, 0, this)">Ready</div>
+          <div class="quiz-opt" onclick="selectAnswer(4, 1, this)">Needs Design Review</div>
+          <div class="quiz-opt" onclick="selectAnswer(4, 2, this)">Regenerate</div>
+          <div class="quiz-opt" onclick="selectAnswer(4, 3, this)">Needs New Input</div>
+        </div>
+        <p class="quiz-feedback hidden text-sm mt-2 font-medium"></p>
+      </div>
+
+      <!-- Q6 -->
+      <div class="quiz-question" data-q="5">
+        <p class="text-sm font-semibold text-white mb-3">6. The output looks like a completely different location — the street-view background was replaced with a river scene. What do you tag it?</p>
+        <div class="space-y-2">
+          <div class="quiz-opt" onclick="selectAnswer(5, 0, this)">Ready</div>
+          <div class="quiz-opt" onclick="selectAnswer(5, 1, this)">Needs Design Review</div>
+          <div class="quiz-opt" onclick="selectAnswer(5, 2, this)">Regenerate</div>
+          <div class="quiz-opt" onclick="selectAnswer(5, 3, this)">Flag</div>
+        </div>
+        <p class="quiz-feedback hidden text-sm mt-2 font-medium"></p>
+      </div>
+
+      <!-- Q7 -->
+      <div class="quiz-question" data-q="6">
+        <p class="text-sm font-semibold text-white mb-3">7. The output is a natural-looking storefront image on a clear day, clearly different from the input, with no weird objects or missing signage. What do you tag it?</p>
+        <div class="space-y-2">
+          <div class="quiz-opt" onclick="selectAnswer(6, 0, this)">Ready</div>
+          <div class="quiz-opt" onclick="selectAnswer(6, 1, this)">Needs Design Review</div>
+          <div class="quiz-opt" onclick="selectAnswer(6, 2, this)">Regenerate</div>
+          <div class="quiz-opt" onclick="selectAnswer(6, 3, this)">Needs New Input</div>
+        </div>
+        <p class="quiz-feedback hidden text-sm mt-2 font-medium"></p>
+      </div>
+
     </div>
 
-    <div class="flex justify-end">
+    <div class="flex items-center justify-between">
+      <p class="text-xs text-slate-500" id="quiz-progress-label">0 / 7 correct</p>
       <button class="btn-next" id="quiz-next-btn" onclick="finishGuide()" disabled>Complete Guide →</button>
     </div>
   </div>
@@ -368,12 +417,23 @@
 <script>
 const TOTAL_SLIDES = 9; // 0-8
 let currentSlide = 0;
-const quizAnswers = [null, null, null]; // user's picks
-const correctAnswers = [1, 2, 1];      // correct indices
+const quizAnswers = [null, null, null, null, null, null, null]; // 7 questions
+const correctAnswers = [1, 2, 1, 3, 2, 2, 0];
 const feedbackText = [
-  ['Incorrect — the images are too similar, this needs to be regenerated.', 'Correct! Too similar = Regenerate.', 'Incorrect — Design Review is for fixable edits, not for similar images.', 'Incorrect — Flag is for skip categories like banks, churches, etc.'],
-  ['Incorrect — the output is missing the sign, it needs a design fix.', 'Incorrect — Regenerate is for severe AI problems. A missing sign is fixable.', 'Correct! A missing sign is a quick design fix.', 'Incorrect — Needs New Input is when the input photo itself is unusable.'],
-  ['Incorrect — Ready means the output looks good.', 'Correct! The input photo is unusable (food photo instead of storefront).', 'Incorrect — Regenerate is for bad AI output, not bad input.', 'Incorrect — Flag is for skip-category locations, not bad input photos.'],
+  // Q1 — too similar → Regenerate
+  ['Incorrect — the images are too similar. That means the AI didn\'t do its job. Tag it Regenerate.', 'Correct! Too similar to input = Regenerate.', 'Incorrect — Design Review is for fixable edits like a missing sign, not for near-identical images.', 'Incorrect — Flag is for skip-category locations (banks, clinics, churches, etc.).'],
+  // Q2 — missing sign → Design Review
+  ['Incorrect — the output has a problem (missing sign), so it\'s not Ready.', 'Incorrect — Regenerate is for severe AI failures. A missing sign is a fixable edit.', 'Correct! Missing signage = quick design fix = Needs Design Review.', 'Incorrect — Needs New Input is about the input photo being unusable, not the output.'],
+  // Q3 — food photo input → Needs New Input
+  ['Incorrect — Ready means the output looks good. The problem here is the input photo.', 'Correct! The input photo is unusable (food, not the storefront). Tag it Needs New Input.', 'Incorrect — Regenerate is for bad AI output. Here the problem is the input photo.', 'Incorrect — Flag is for skip-category location types, not for bad input photos.'],
+  // Q4 — dental clinic → Flag
+  ['Incorrect — even if the image looks good, dental clinics are a Medical Center skip category.', 'Incorrect — the image quality is irrelevant here. Medical centers are always flagged.', 'Incorrect — Regenerate is about the AI output quality, not the location type.', 'Correct! Dental clinics are Medical Centers — a Flag (skip) category regardless of image quality.'],
+  // Q5 — floating sofa → Regenerate
+  ['Incorrect — a floating sofa is a clear AI artifact. This can\'t be left as-is.', 'Incorrect — Design Review is for minor, fixable edits. A physically impossible scene needs full regeneration.', 'Correct! Weird AI objects or impossible scenes = Regenerate.', 'Incorrect — Needs New Input is about the source photo, not AI output problems.'],
+  // Q6 — river scene → Regenerate
+  ['Incorrect — the background was completely replaced with the wrong environment. This isn\'t production-ready.', 'Incorrect — swapping a street for a river is not a minor edit. It needs full regeneration.', 'Correct! Completely wrong environment = Regenerate.', 'Incorrect — Flag is for location types (clinics, banks, etc.), not for bad AI output.'],
+  // Q7 — good output → Ready
+  ['Correct! Natural-looking, clearly different from input, no issues = Ready.', 'Incorrect — Design Review is only needed when there\'s a specific fixable problem. This image has none.', 'Incorrect — Regenerate is for bad AI output. This output sounds good.', 'Incorrect — Needs New Input is about an unusable source photo. The output here is fine.'],
 ];
 
 function goToSlide(n) {
@@ -433,8 +493,11 @@ function selectAnswer(qIdx, choiceIdx, el) {
 }
 
 function checkQuizComplete() {
-  const allCorrect = quizAnswers.every((a, i) => a === correctAnswers[i]);
+  const correctCount = quizAnswers.filter((a, i) => a === correctAnswers[i]).length;
+  const allCorrect = correctCount === correctAnswers.length;
   document.getElementById('quiz-next-btn').disabled = !allCorrect;
+  const lbl = document.getElementById('quiz-progress-label');
+  if (lbl) lbl.textContent = `${correctCount} / ${correctAnswers.length} correct`;
 }
 
 function finishGuide() {
