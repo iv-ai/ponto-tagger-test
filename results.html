@@ -73,6 +73,7 @@
     <div style="overflow-y:auto;flex:1;padding:0;" id="feedback-modal-body"></div>
     <div style="padding:1rem 1.5rem;border-top:1px solid #f1f5f9;flex-shrink:0;display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
       <button class="btn btn-primary" onclick="generateFeedbackLink()">Generate Link</button>
+      <span id="feedback-save-msg" class="text-xs text-gray-400 hidden">Notes saved to answer key ✓</span>
       <div id="feedback-link-row" class="hidden flex-1 flex items-center gap-2 min-w-0">
         <input type="text" id="feedback-link-output" readonly style="flex:1;font-size:0.75rem;font-family:monospace;border:1px solid #e2e8f0;border-radius:0.375rem;padding:0.35rem 0.5rem;min-width:0;" />
         <button class="btn btn-outline text-xs whitespace-nowrap" onclick="copyFeedbackLink()">Copy</button>
@@ -604,15 +605,34 @@ function closeFeedbackModal() {
   document.body.style.overflow = '';
 }
 
-function generateFeedbackLink() {
+async function generateFeedbackLink() {
   const subs = getSelectedSubs();
   const template = allSubmissions[0]?.items || [];
 
-  // Collect current notes from textareas
+  // Collect current notes from textareas into feedbackNotes and masterKey
   template.forEach(item => {
     const el = document.getElementById('note-' + item.place_id);
-    if (el) feedbackNotes[item.place_id] = el.value;
+    if (el) {
+      feedbackNotes[item.place_id] = el.value;
+      if (masterKey?.[item.place_id]) masterKey[item.place_id].comment = el.value;
+    }
   });
+
+  // Save updated comments back to the master key in the sheet
+  if (SCRIPT_URL && masterKey) {
+    const items = Object.entries(masterKey).map(([place_id, v]) => ({
+      place_id, tag: v.tag || '', comment: v.comment || '',
+    }));
+    fetch(SCRIPT_URL, {
+      method: 'POST', mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'saveMaster', items }),
+    }).then(() => {
+      const msg = document.getElementById('feedback-save-msg');
+      msg.classList.remove('hidden');
+      setTimeout(() => msg.classList.add('hidden'), 3000);
+    });
+  }
 
   const wrongItems = template.filter(item => {
     const masterAns = masterKey?.[item.place_id];
