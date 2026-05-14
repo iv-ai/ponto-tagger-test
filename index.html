@@ -102,45 +102,83 @@
     <div class="card p-8 space-y-6">
       <div>
         <h1 class="text-2xl font-bold text-gray-900 mb-1">Ponto Tagger Test</h1>
-        <p class="text-sm text-gray-500">QA Image Review Assessment</p>
+        <p class="text-sm text-gray-500">QA Image Review Assessment — follow the steps below in order</p>
       </div>
-      <div class="space-y-3 text-sm text-gray-700">
-        <div id="guideline-gate" class="p-4 bg-blue-50 border border-blue-200 rounded-lg space-y-3">
-          <p class="font-semibold text-blue-800 text-sm">Step 1 — Complete the interactive guide before starting</p>
-          <p class="text-xs text-blue-700">You must read all sections and pass the quiz to unlock the test.</p>
-          <button onclick="openGuideline()" id="guideline-btn"
-            class="w-full py-2.5 rounded-lg font-semibold text-sm border-2 border-blue-500 text-blue-700 bg-white hover:bg-blue-50 transition-colors">
-            Open Interactive Guide →
+
+      <!-- STEP 1: Read guideline -->
+      <div class="space-y-2">
+        <div class="flex items-center gap-2">
+          <span id="step1-num" class="w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center flex-shrink-0">1</span>
+          <p class="text-sm font-semibold text-gray-800">Read the Tagger Guideline</p>
+        </div>
+        <div class="ml-8 space-y-2">
+          <p class="text-xs text-gray-500">Open and read the full guideline document before continuing.</p>
+          <a href="https://docs.google.com/document/d/1jpt4PgX-0Yo_sU2m9X6-YY_41Zn8Fa9khp53dPNWw1k/edit?tab=t.0"
+            target="_blank" onclick="onGuidelineDocOpened()"
+            class="inline-block text-sm text-blue-600 underline hover:text-blue-800 font-medium">
+            Open Tagger Guideline Document →
+          </a>
+          <div id="step1-done" class="hidden flex items-center gap-1.5 text-green-700 text-xs font-semibold">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            Guideline opened ✓
+          </div>
+        </div>
+      </div>
+
+      <div class="border-t border-gray-100"></div>
+
+      <!-- STEP 2: Interactive tutorial -->
+      <div class="space-y-2" id="step2-section">
+        <div class="flex items-center gap-2">
+          <span id="step2-num" class="w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center flex-shrink-0 bg-gray-200 text-gray-400">2</span>
+          <p class="text-sm font-semibold text-gray-400" id="step2-label">Complete the Interactive Tutorial</p>
+        </div>
+        <div class="ml-8 space-y-2">
+          <p class="text-xs text-gray-400" id="step2-desc">Walk through examples for each tag type and pass a short quiz.</p>
+          <button onclick="openGuideline()" id="tutorial-btn"
+            disabled
+            class="w-full py-2.5 rounded-lg font-semibold text-sm border-2 border-gray-200 text-gray-400 bg-white cursor-not-allowed transition-colors"
+            style="opacity:0.5">
+            Open Interactive Tutorial →
           </button>
-          <p class="text-xs text-blue-600 text-center">Also available: <a href="https://docs.google.com/document/d/1jpt4PgX-0Yo_sU2m9X6-YY_41Zn8Fa9khp53dPNWw1k/edit?tab=t.0" target="_blank" class="underline hover:text-blue-800">Full guideline document</a></p>
+          <div id="step2-done" class="hidden flex items-center gap-1.5 text-green-700 text-xs font-semibold">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            Tutorial completed ✓
+          </div>
         </div>
-        <div id="guideline-done" class="hidden p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#15803d" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-          <p class="text-sm font-semibold text-green-800">Guide completed ✓</p>
+      </div>
+
+      <div class="border-t border-gray-100"></div>
+
+      <!-- STEP 3: Name, email, confirmation -->
+      <div class="space-y-4" id="step3-section">
+        <div class="flex items-center gap-2">
+          <span class="w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center flex-shrink-0 bg-gray-200 text-gray-400" id="step3-num">3</span>
+          <p class="text-sm font-semibold text-gray-400" id="step3-label">Enter your details & confirm</p>
         </div>
-        <p>You will be shown <strong>42 location images</strong> — each with an input photo and an AI-generated output photo.</p>
-        <p>For each item, choose the correct status:</p>
-        <ul class="space-y-1.5 ml-4">
-          <li><span class="tag-badge bg-green-100 text-green-700">Ready</span> — Output looks good. Different from input, natural, production-quality.</li>
-          <li><span class="tag-badge bg-purple-100 text-purple-700">Needs Design Review</span> — Minor edits needed (missing signage, unnatural crop).</li>
-          <li><span class="tag-badge bg-yellow-100 text-yellow-700">Regenerate</span> — Too similar to input, weird AI artifacts, or major scene errors.</li>
-          <li><span class="tag-badge bg-blue-100 text-blue-700">Needs New Input</span> — Source image is unusable (food photo, person, irrelevant).</li>
-          <li><span class="tag-badge bg-red-100 text-red-700">Flag</span> — Location is a skip category (cemetery, residence, medical, bank, etc.)</li>
-        </ul>
-        <p>You can leave a comment on any item. Work through all 42 items, then submit.</p>
+        <div class="ml-8 space-y-4" id="step3-fields">
+          <div class="space-y-1.5 opacity-40 pointer-events-none" id="step3-inputs">
+            <div class="space-y-1">
+              <label class="block text-sm font-medium text-gray-700">Your full name <span class="text-red-500">*</span></label>
+              <input type="text" id="tester-name-input" placeholder="e.g. Jane Smith" oninput="updateSteps()" />
+              <p id="name-error" class="text-xs text-red-500 hidden">Please enter your name.</p>
+            </div>
+            <div class="space-y-1">
+              <label class="block text-sm font-medium text-gray-700">Your Gmail address <span class="text-red-500">*</span></label>
+              <p class="text-xs text-gray-500">The Gmail you'll use to access the tagger tool if selected.</p>
+              <input type="email" id="tester-email-input" placeholder="e.g. jane.smith@gmail.com" oninput="checkConfirmPhrase()" />
+              <p id="email-error" class="text-xs text-red-500 hidden">Please enter a valid Gmail address.</p>
+            </div>
+            <div class="space-y-1">
+              <label class="block text-sm font-medium text-gray-700">Confirmation <span class="text-red-500">*</span></label>
+              <p class="text-xs text-gray-500">Type exactly: <span class="font-mono font-semibold text-gray-700">I have fully read the guidelines</span></p>
+              <input type="text" id="confirm-read-input" placeholder="I have fully read the guidelines" oninput="checkConfirmPhrase()" />
+              <p id="confirm-error" class="text-xs text-red-500 hidden">Please type the confirmation phrase exactly.</p>
+            </div>
+          </div>
+        </div>
       </div>
-      <div class="space-y-2">
-        <label class="block text-sm font-medium text-gray-700">Your full name <span class="text-red-500">*</span></label>
-        <input type="text" id="tester-name-input" placeholder="e.g. Jane Smith" oninput="checkConfirmPhrase()" />
-        <p id="name-error" class="text-xs text-red-500 hidden">Please enter your name before starting.</p>
-      </div>
-      <div class="space-y-2">
-        <label class="block text-sm font-medium text-gray-700">Your Gmail address <span class="text-red-500">*</span></label>
-        <p class="text-xs text-gray-500">The Gmail you'll use to access the tagger tool if selected.</p>
-        <input type="email" id="tester-email-input" placeholder="e.g. jane.smith@gmail.com" oninput="checkConfirmPhrase()" />
-        <p id="email-error" class="text-xs text-red-500 hidden">Please enter a valid Gmail address.</p>
-      </div>
-      <p id="confirm-error" class="text-xs text-red-500 hidden">Please complete the interactive guide first.</p>
+
       <button class="btn btn-primary w-full py-3 text-base" id="start-btn" onclick="startTest()" disabled style="opacity:0.4;cursor:not-allowed;">Start Test →</button>
     </div>
   </div>
@@ -416,34 +454,78 @@ const STATUS_COLORS = {
   flagged: 'bg-red-100 text-red-700',
 };
 
-// ─── GUIDELINE GATE ──────────────────────────────────────────────────────────
-let guidelineOpened = sessionStorage.getItem('guidelineComplete') === '1';
+// ─── STEP GATE ───────────────────────────────────────────────────────────────
+const CONFIRM_PHRASE = 'I have fully read the guidelines';
+let docOpened      = sessionStorage.getItem('docOpened')      === '1';
+let tutorialDone   = sessionStorage.getItem('guidelineComplete') === '1';
+
+function onGuidelineDocOpened() {
+  docOpened = true;
+  sessionStorage.setItem('docOpened', '1');
+  updateSteps();
+}
 
 function openGuideline() {
   window.location.href = 'guideline.html';
 }
 
-// Called on page load — if returning from guideline, mark complete
-if (guidelineOpened) markGuidelineDone();
+function updateSteps() {
+  const isMaster = document.getElementById('tester-name-input').value.trim() === 'poiMaster';
 
-function markGuidelineDone() {
-  guidelineOpened = true;
-  document.getElementById('guideline-gate').classList.add('hidden');
-  document.getElementById('guideline-done').classList.remove('hidden');
+  // Step 1
+  if (docOpened || isMaster) {
+    document.getElementById('step1-done').classList.remove('hidden');
+    document.getElementById('step1-num').className = 'w-6 h-6 rounded-full bg-green-500 text-white text-xs font-bold flex items-center justify-center flex-shrink-0';
+    document.getElementById('step1-num').textContent = '✓';
+  }
+
+  // Step 2 — unlock after step 1
+  const step2Unlocked = docOpened || isMaster;
+  const tutorialBtn = document.getElementById('tutorial-btn');
+  document.getElementById('step2-label').className = 'text-sm font-semibold ' + (step2Unlocked ? 'text-gray-800' : 'text-gray-400');
+  document.getElementById('step2-desc').className  = 'text-xs ' + (step2Unlocked ? 'text-gray-500' : 'text-gray-400');
+  document.getElementById('step2-num').className   = 'w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center flex-shrink-0 ' +
+    (tutorialDone || isMaster ? 'bg-green-500 text-white' : step2Unlocked ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-400');
+  document.getElementById('step2-num').textContent = (tutorialDone || isMaster) ? '✓' : '2';
+
+  if (tutorialDone || isMaster) {
+    document.getElementById('step2-done').classList.remove('hidden');
+    tutorialBtn.classList.add('hidden');
+  } else if (step2Unlocked) {
+    tutorialBtn.disabled = false;
+    tutorialBtn.className = 'w-full py-2.5 rounded-lg font-semibold text-sm border-2 border-blue-500 text-blue-700 bg-white hover:bg-blue-50 cursor-pointer transition-colors';
+    tutorialBtn.style.opacity = '1';
+  }
+
+  // Step 3 — unlock after step 2
+  const step3Unlocked = tutorialDone || isMaster;
+  document.getElementById('step3-label').className = 'text-sm font-semibold ' + (step3Unlocked ? 'text-gray-800' : 'text-gray-400');
+  document.getElementById('step3-num').className   = 'w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center flex-shrink-0 ' +
+    (step3Unlocked ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-400');
+  document.getElementById('step3-inputs').className = step3Unlocked
+    ? 'space-y-3'
+    : 'space-y-3 opacity-40 pointer-events-none';
+
   checkConfirmPhrase();
 }
 
 function checkConfirmPhrase() {
   const name  = document.getElementById('tester-name-input').value.trim();
   const email = document.getElementById('tester-email-input').value.trim();
+  const confirmation = document.getElementById('confirm-read-input').value;
   const isMaster = name === 'poiMaster';
+  const step3Unlocked = tutorialDone || isMaster;
   const emailOk = isMaster || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-  const ready = (guidelineOpened || isMaster) && name.length > 0 && emailOk;
+  const confirmOk = isMaster || confirmation === CONFIRM_PHRASE;
+  const ready = step3Unlocked && name.length > 0 && emailOk && confirmOk;
   const btn = document.getElementById('start-btn');
   btn.disabled = !ready;
   btn.style.opacity = ready ? '1' : '0.4';
   btn.style.cursor = ready ? 'pointer' : 'not-allowed';
 }
+
+// Init on page load
+updateSteps();
 
 // ─── SHUFFLE ────────────────────────────────────────────────────────────────
 function shuffle(arr) {
@@ -487,7 +569,8 @@ function startTest() {
   }
 
   const isMasterCheck = nameInput === 'poiMaster';
-  if (!guidelineOpened && !isMasterCheck) {
+  const confirmVal = document.getElementById('confirm-read-input').value;
+  if (!isMasterCheck && (!tutorialDone || confirmVal !== CONFIRM_PHRASE)) {
     document.getElementById('confirm-error').classList.remove('hidden');
     valid = false;
   } else {
