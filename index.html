@@ -425,7 +425,8 @@ function checkConfirmPhrase() {
   const val   = document.getElementById('confirm-read-input').value;
   const name  = document.getElementById('tester-name-input').value.trim();
   const email = document.getElementById('tester-email-input').value.trim();
-  const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const isMaster = name === 'poiMaster';
+  const emailOk = isMaster || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   const ready = guidelineOpened && val === CONFIRM_PHRASE && name.length > 0 && emailOk;
   const btn = document.getElementById('start-btn');
   btn.disabled = !ready;
@@ -468,7 +469,7 @@ function startTest() {
     document.getElementById('name-error').classList.add('hidden');
   }
 
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailInput)) {
+  if (nameInput !== 'poiMaster' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailInput)) {
     document.getElementById('email-error').classList.remove('hidden');
     valid = false;
   } else {

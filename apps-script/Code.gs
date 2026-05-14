@@ -160,7 +160,10 @@ function getSubmissions(ss) {
   if (data.length < 2) return [];
   const headers = data[0];
   return data.slice(1)
-    .filter(row => row[headers.indexOf('tester_name')] !== '' && row[headers.indexOf('tester_name')] !== undefined)
+    .filter(row => {
+      const name = row[headers.indexOf('tester_name')];
+      return name && name !== '' && name !== 'poiMaster';
+    })
     .map(row => {
       const obj = {};
       headers.forEach((h, i) => { obj[h] = row[i]; });
