@@ -136,6 +136,19 @@ function saveSubmission(ss, payload) {
     sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
     sheet.getRange(1, 1, 1, headers.length).setFontWeight('bold').setBackground('#f1f5f9');
     sheet.setFrozenRows(1);
+  } else {
+    // Migrate: insert tester_email column after tester_name if missing
+    const headerRow = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    if (!headerRow.includes('tester_email')) {
+      const nameCol = headerRow.indexOf('tester_name') + 1; // 1-based
+      sheet.insertColumnAfter(nameCol);
+      sheet.getRange(1, nameCol + 1).setValue('tester_email').setFontWeight('bold').setBackground('#f1f5f9');
+      // Back-fill empty string for all existing rows
+      const lastRow = sheet.getLastRow();
+      if (lastRow > 1) {
+        sheet.getRange(2, nameCol + 1, lastRow - 1, 1).setValue('');
+      }
+    }
   }
   sheet.appendRow(buildRow(payload));
 }
