@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ponto QA Tagger — Guidelines</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    body { font-family: 'Inter', system-ui, sans-serif; background: #0f172a; color: #f1f5f9; min-height: 100vh; }
+    .slide { display: none; }
+    .slide.active { display: flex; }
+    .tag-badge { display: inline-flex; align-items: center; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.8rem; font-weight: 700; white-space: nowrap; }
+    .tag-ready    { background: #dcfce7; color: #15803d; }
+    .tag-design   { background: #f3e8ff; color: #7e22ce; }
+    .tag-regen    { background: #fef9c3; color: #a16207; }
+    .tag-newinput { background: #dbeafe; color: #1d4ed8; }
+    .tag-flagged  { background: #fee2e2; color: #b91c1c; }
+    .example-img { border-radius: 8px; border: 1px solid #334155; width: 100%; max-height: 280px; object-fit: contain; background: #1e293b; cursor: pointer; }
+    .example-img:hover { border-color: #64748b; }
+    .lightbox { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 200; align-items: center; justify-content: center; flex-direction: column; gap: 1rem; }
+    .lightbox.open { display: flex; }
+    .lightbox img { max-width: 92vw; max-height: 88vh; border-radius: 8px; object-fit: contain; }
+    .progress-dot { width: 8px; height: 8px; border-radius: 50%; background: #334155; transition: background 0.2s; flex-shrink: 0; }
+    .progress-dot.done { background: #3b82f6; }
+    .progress-dot.current { background: #f1f5f9; }
+    .quiz-opt { border: 2px solid #334155; border-radius: 8px; padding: 0.75rem 1rem; cursor: pointer; font-size: 0.875rem; transition: all 0.15s; background: #1e293b; color: #cbd5e1; }
+    .quiz-opt:hover { border-color: #64748b; background: #263044; }
+    .quiz-opt.correct { border-color: #22c55e; background: #052e16; color: #86efac; }
+    .quiz-opt.wrong   { border-color: #ef4444; background: #2d0a0a; color: #fca5a5; }
+    .btn-next { background: #3b82f6; color: white; font-weight: 600; padding: 0.7rem 2rem; border-radius: 8px; border: none; cursor: pointer; font-size: 0.9rem; transition: background 0.15s; font-family: inherit; }
+    .btn-next:hover:not(:disabled) { background: #2563eb; }
+    .btn-next:disabled { opacity: 0.35; cursor: not-allowed; }
+    .label-pill { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 0.2rem 0.5rem; border-radius: 4px; }
+  </style>
+</head>
+<body>
+
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <img id="lightbox-img" src="" alt="" />
+  <p class="text-white text-xs opacity-50">Click anywhere to close</p>
+</div>
+
+<!-- Progress bar -->
+<div class="fixed top-0 left-0 right-0 z-50 bg-slate-900 border-b border-slate-800 px-6 py-3 flex items-center gap-4">
+  <span class="text-xs text-slate-400 font-semibold uppercase tracking-wide whitespace-nowrap">QA Tagger Guide</span>
+  <div class="flex items-center gap-1.5 flex-1 justify-center" id="progress-dots"></div>
+  <span class="text-xs text-slate-400 whitespace-nowrap" id="progress-label">1 / 8</span>
+</div>
+
+<div class="pt-16 pb-24 px-4 max-w-3xl mx-auto">
+
+  <!-- ─── SLIDE 0: Welcome ─────────────────────────────────────────── -->
+  <div class="slide active flex-col items-center justify-center min-h-[70vh] text-center gap-6" data-slide="0">
+    <div class="space-y-2">
+      <p class="text-xs text-blue-400 font-semibold uppercase tracking-widest">Ponto QA Tagger</p>
+      <h1 class="text-3xl font-bold text-white">Tagger Guidelines</h1>
+      <p class="text-slate-400 text-sm max-w-md mx-auto">Read each section carefully. You must complete this guide before you can start the test.</p>
+    </div>
+    <div class="bg-slate-800 border border-slate-700 rounded-xl px-6 py-5 max-w-md text-left space-y-3">
+      <p class="text-sm font-semibold text-white">What you'll learn:</p>
+      <ul class="space-y-2 text-sm text-slate-300">
+        <li class="flex items-center gap-2"><span class="tag-badge tag-ready">Ready</span> Output looks good</li>
+        <li class="flex items-center gap-2"><span class="tag-badge tag-design">Design Review</span> Minor edit needed</li>
+        <li class="flex items-center gap-2"><span class="tag-badge tag-regen">Regenerate</span> Bad AI output</li>
+        <li class="flex items-center gap-2"><span class="tag-badge tag-newinput">New Input</span> Input photo unusable</li>
+        <li class="flex items-center gap-2"><span class="tag-badge tag-flagged">Flag</span> Skip category</li>
+      </ul>
+    </div>
+    <button class="btn-next" onclick="nextSlide()">Start Guide →</button>
+  </div>
+
+  <!-- ─── SLIDE 1: Image Requirements ─────────────────────────────── -->
+  <div class="slide flex-col gap-6 py-8" data-slide="1">
+    <div>
+      <p class="text-xs text-blue-400 font-semibold uppercase tracking-widest mb-1">Before you tag</p>
+      <h2 class="text-2xl font-bold text-white">Image Requirements</h2>
+      <p class="text-slate-400 text-sm mt-1">The goal: find a <span class="text-white font-semibold">"Good Quality Image of the location on a different day."</span></p>
+    </div>
+    <div class="bg-slate-800 border border-slate-700 rounded-xl p-5 space-y-4">
+      <p class="text-sm font-semibold text-slate-300">For every image pair, ask yourself:</p>
+      <div class="space-y-3">
+        <div class="flex gap-3">
+          <span class="text-blue-400 font-bold text-lg leading-tight">1</span>
+          <p class="text-sm text-slate-200">Is the output image <span class="text-white font-semibold underline">different enough</span> from the input? (not just the same photo with minor tweaks — people, cars, sky, etc.)</p>
+        </div>
+        <div class="flex gap-3">
+          <span class="text-blue-400 font-bold text-lg leading-tight">2</span>
+          <p class="text-sm text-slate-200">Does it contain any <span class="text-white font-semibold underline">weird text, signage, or objects</span> that shouldn't be there?</p>
+        </div>
+        <div class="flex gap-3">
+          <span class="text-blue-400 font-bold text-lg leading-tight">3</span>
+          <p class="text-sm text-slate-200">Does the output image <span class="text-white font-semibold underline">look natural</span>? (not an empty bar, floating furniture, impossible scene, etc.)</p>
+        </div>
+        <div class="flex gap-3">
+          <span class="text-blue-400 font-bold text-lg leading-tight">4</span>
+          <p class="text-sm text-slate-200">Are there any other issues? (bad crop, wiped-out building, wrong environment)</p>
+        </div>
+      </div>
+    </div>
+    <div class="flex justify-end">
+      <button class="btn-next" onclick="nextSlide()">Next →</button>
+    </div>
+  </div>
+
+  <!-- ─── SLIDE 2: Ready ───────────────────────────────────────────── -->
+  <div class="slide flex-col gap-6 py-8" data-slide="2">
+    <div>
+      <p class="text-xs text-slate-400 font-semibold uppercase tracking-widest mb-1">Case 1</p>
+      <div class="flex items-center gap-3">
+        <h2 class="text-2xl font-bold text-white">Ready</h2>
+        <span class="tag-badge tag-ready">Ready</span>
+      </div>
+      <p class="text-slate-300 mt-1">The output looks good and doesn't need editing.</p>
+      <p class="text-blue-300 text-sm mt-1 font-medium italic">"Good Quality Image of the location on a different day"</p>
+    </div>
+    <p class="text-xs text-slate-500 uppercase tracking-wide font-semibold">Examples — click to enlarge</p>
+    <div class="grid grid-cols-1 gap-4">
+      <div>
+        <p class="text-xs text-slate-500 mb-1 label-pill bg-slate-800">Different lighting, same location</p>
+        <img class="example-img" src="guideline-images/image10.png" onclick="openLightbox(this.src)" />
+      </div>
+      <div>
+        <p class="text-xs text-slate-500 mb-1 label-pill bg-slate-800">Natural storefront, clearly different day</p>
+        <img class="example-img" src="guideline-images/image17.png" onclick="openLightbox(this.src)" />
+      </div>
+      <div>
+        <p class="text-xs text-slate-500 mb-1 label-pill bg-slate-800">Clean output, good quality</p>
+        <img class="example-img" src="guideline-images/image14.png" onclick="openLightbox(this.src)" />
+      </div>
+    </div>
+    <div class="flex justify-end">
+      <button class="btn-next" onclick="nextSlide()">Next →</button>
+    </div>
+  </div>
+
+  <!-- ─── SLIDE 3: Design Review ───────────────────────────────────── -->
+  <div class="slide flex-col gap-6 py-8" data-slide="3">
+    <div>
+      <p class="text-xs text-slate-400 font-semibold uppercase tracking-widest mb-1">Case 2</p>
+      <div class="flex items-center gap-3">
+        <h2 class="text-2xl font-bold text-white">Needs Design Review</h2>
+        <span class="tag-badge tag-design">Design Review</span>
+      </div>
+      <p class="text-slate-300 mt-1">The output is close but needs a quick design edit — wrong/missing signage, bad crop, unnatural element.</p>
+    </div>
+    <p class="text-xs text-slate-500 uppercase tracking-wide font-semibold">Examples — click to enlarge</p>
+    <div class="grid grid-cols-1 gap-5">
+      <div>
+        <img class="example-img" src="guideline-images/image1.png" onclick="openLightbox(this.src)" />
+        <p class="text-sm text-amber-300 font-semibold mt-2">Main signage needs to be borrowed from original</p>
+        <p class="text-xs text-slate-400 mt-0.5">The output didn't carry over the store's sign — a quick design fix, not a full regeneration.</p>
+      </div>
+      <div>
+        <img class="example-img" src="guideline-images/image20.png" onclick="openLightbox(this.src)" />
+        <p class="text-sm text-amber-300 font-semibold mt-2">Crop photo — left side is not natural</p>
+        <p class="text-xs text-slate-400 mt-0.5">The framing cuts off awkwardly. Needs a crop fix, not a regeneration.</p>
+      </div>
+    </div>
+    <div class="flex justify-end">
+      <button class="btn-next" onclick="nextSlide()">Next →</button>
+    </div>
+  </div>
+
+  <!-- ─── SLIDE 4: Regenerate ──────────────────────────────────────── -->
+  <div class="slide flex-col gap-6 py-8" data-slide="4">
+    <div>
+      <p class="text-xs text-slate-400 font-semibold uppercase tracking-widest mb-1">Case 3</p>
+      <div class="flex items-center gap-3">
+        <h2 class="text-2xl font-bold text-white">Regenerate</h2>
+        <span class="tag-badge tag-regen">Regenerate</span>
+      </div>
+      <p class="text-slate-300 mt-1">The AI output is too broken to fix with a quick edit. Two triggers:</p>
+    </div>
+    <div class="grid grid-cols-2 gap-3">
+      <div class="bg-slate-800 border border-slate-700 rounded-lg p-3 text-center">
+        <p class="text-sm font-semibold text-white">Too similar</p>
+        <p class="text-xs text-slate-400 mt-1">Output looks almost identical to the input</p>
+      </div>
+      <div class="bg-slate-800 border border-slate-700 rounded-lg p-3 text-center">
+        <p class="text-sm font-semibold text-white">Weird AI artifacts</p>
+        <p class="text-xs text-slate-400 mt-1">Strange objects, impossible scenes, wiped-out building</p>
+      </div>
+    </div>
+    <p class="text-xs text-slate-500 uppercase tracking-wide font-semibold">Examples — click to enlarge</p>
+    <div class="grid grid-cols-2 gap-4">
+      <div>
+        <img class="example-img" src="guideline-images/image9.png" onclick="openLightbox(this.src)" />
+        <p class="text-xs text-red-400 mt-1 font-medium">Awkward scene — salon chair placement</p>
+      </div>
+      <div>
+        <img class="example-img" src="guideline-images/image7.png" onclick="openLightbox(this.src)" />
+        <p class="text-xs text-red-400 mt-1 font-medium">Awkward object (sofa) placement</p>
+      </div>
+      <div>
+        <img class="example-img" src="guideline-images/image13.png" onclick="openLightbox(this.src)" />
+        <p class="text-xs text-red-400 mt-1 font-medium">Missing stools + awkward plant</p>
+      </div>
+      <div>
+        <img class="example-img" src="guideline-images/image19.png" onclick="openLightbox(this.src)" />
+        <p class="text-xs text-red-400 mt-1 font-medium">Street view changed to river view</p>
+      </div>
+      <div>
+        <img class="example-img" src="guideline-images/image18.png" onclick="openLightbox(this.src)" />
+        <p class="text-xs text-red-400 mt-1 font-medium">Building wiped out</p>
+      </div>
+      <div>
+        <img class="example-img" src="guideline-images/image6.png" onclick="openLightbox(this.src)" />
+        <p class="text-xs text-red-400 mt-1 font-medium">Weird object (pumpkin)</p>
+      </div>
+      <div>
+        <img class="example-img" src="guideline-images/image11.png" onclick="openLightbox(this.src)" />
+        <p class="text-xs text-red-400 mt-1 font-medium">Image too similar</p>
+      </div>
+      <div>
+        <img class="example-img" src="guideline-images/image15.png" onclick="openLightbox(this.src)" />
+        <p class="text-xs text-red-400 mt-1 font-medium">Image too similar</p>
+      </div>
+    </div>
+    <div class="flex justify-end">
+      <button class="btn-next" onclick="nextSlide()">Next →</button>
+    </div>
+  </div>
+
+  <!-- ─── SLIDE 5: Needs New Input ─────────────────────────────────── -->
+  <div class="slide flex-col gap-6 py-8" data-slide="5">
+    <div>
+      <p class="text-xs text-slate-400 font-semibold uppercase tracking-widest mb-1">Case 4</p>
+      <div class="flex items-center gap-3">
+        <h2 class="text-2xl font-bold text-white">Needs New Input</h2>
+        <span class="tag-badge tag-newinput">New Input</span>
+      </div>
+      <p class="text-slate-300 mt-1">The <span class="font-semibold text-white">input photo</span> is unusable — the AI can't do its job when the source isn't a proper storefront photo.</p>
+    </div>
+    <div class="bg-slate-800 border border-slate-700 rounded-xl p-4 space-y-2">
+      <p class="text-sm font-semibold text-white">Flag the input when it shows:</p>
+      <ul class="text-sm text-slate-300 space-y-1 list-disc list-inside">
+        <li>Food or drink (not the exterior)</li>
+        <li>A person or portrait</li>
+        <li>Interior of the place (not the facade)</li>
+        <li>An irrelevant or unrelated scene</li>
+        <li>Anything that isn't clearly the outside of the location</li>
+      </ul>
+    </div>
+    <p class="text-xs text-slate-500 uppercase tracking-wide font-semibold">Example — click to enlarge</p>
+    <div>
+      <img class="example-img" src="guideline-images/image16.png" onclick="openLightbox(this.src)" />
+      <p class="text-sm text-blue-300 font-medium mt-2">Input shows food — not the storefront. Mark as Needs New Input.</p>
+    </div>
+    <div class="flex justify-end">
+      <button class="btn-next" onclick="nextSlide()">Next →</button>
+    </div>
+  </div>
+
+  <!-- ─── SLIDE 6: Flag ────────────────────────────────────────────── -->
+  <div class="slide flex-col gap-6 py-8" data-slide="6">
+    <div>
+      <p class="text-xs text-slate-400 font-semibold uppercase tracking-widest mb-1">Case 5</p>
+      <div class="flex items-center gap-3">
+        <h2 class="text-2xl font-bold text-white">Flag</h2>
+        <span class="tag-badge tag-flagged">Flag</span>
+      </div>
+      <p class="text-slate-300 mt-1">The location is a <span class="font-semibold text-white">skip category</span> — we don't process these types of places.</p>
+    </div>
+    <div class="bg-slate-800 border border-slate-700 rounded-xl p-5">
+      <p class="text-xs text-slate-400 uppercase tracking-wide font-semibold mb-3">Flag these location types</p>
+      <div class="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+        <div><span class="text-white font-medium">Cemetery</span> <span class="text-slate-400">— memorial / burial ground</span></div>
+        <div><span class="text-white font-medium">City Block</span> <span class="text-slate-400">— apartment / office blocks</span></div>
+        <div><span class="text-white font-medium">Cadastral</span> <span class="text-slate-400">— land surveying / mapping</span></div>
+        <div><span class="text-white font-medium">Adult Entertainment</span> <span class="text-slate-400">— clubs, gambling</span></div>
+        <div><span class="text-white font-medium">Event Spaces</span> <span class="text-slate-400">— banquet halls, convention centers</span></div>
+        <div><span class="text-white font-medium">Lottery Booth</span> <span class="text-slate-400">— retail / gaming</span></div>
+        <div class="col-span-2"><span class="text-white font-medium">Professional Place</span> <span class="text-slate-400">— schools (K-12), government, military, dance/martial arts/acting studios, libraries</span></div>
+        <div><span class="text-white font-medium">Medical Center</span> <span class="text-slate-400">— dentist, hospital, clinic</span></div>
+        <div><span class="text-white font-medium">Spiritual Center</span> <span class="text-slate-400">— religious / worship</span></div>
+        <div><span class="text-white font-medium">Residence</span> <span class="text-slate-400">— houses, condos, apartments</span></div>
+        <div><span class="text-white font-medium">Auto Service</span> <span class="text-slate-400">— repairs, oil changes, inspections</span></div>
+        <div><span class="text-white font-medium">Banking & Finance</span> <span class="text-slate-400">— banks, ATMs, financial advisors</span></div>
+        <div><span class="text-white font-medium">Building & Construction</span> <span class="text-slate-400">— contractors, architects</span></div>
+        <div class="col-span-2"><span class="text-white font-medium">Commercial Services</span> <span class="text-slate-400">— printing, repair, consulting, catering, logistics, studios</span></div>
+        <div><span class="text-white font-medium">Manufacture / Factory</span></div>
+        <div><span class="text-white font-medium">Pharmacy</span> <span class="text-slate-400">— flag + comment "pharmacy"</span></div>
+        <div class="col-span-2"><span class="text-white font-medium">Closed locations</span> <span class="text-slate-400">— permanently or temporarily closed</span></div>
+        <div><span class="text-white font-medium">Vehicles as locations</span> <span class="text-slate-400">— boat, bus, van, ship</span></div>
+      </div>
+    </div>
+    <div class="bg-amber-950 border border-amber-700 rounded-lg px-4 py-3 text-sm text-amber-200">
+      <span class="font-semibold">When unsure:</span> Flag it and leave a comment explaining why. It's better to flag and explain than to guess.
+    </div>
+    <div class="flex justify-end">
+      <button class="btn-next" onclick="nextSlide()">Next →</button>
+    </div>
+  </div>
+
+  <!-- ─── SLIDE 7: Quiz ────────────────────────────────────────────── -->
+  <div class="slide flex-col gap-8 py-8" data-slide="7">
+    <div>
+      <p class="text-xs text-blue-400 font-semibold uppercase tracking-widest mb-1">Quick check</p>
+      <h2 class="text-2xl font-bold text-white">Let's make sure you've got it</h2>
+      <p class="text-slate-400 text-sm mt-1">Answer all 3 questions correctly to unlock the test.</p>
+    </div>
+
+    <div class="space-y-8" id="quiz-container">
+
+      <!-- Q1 -->
+      <div class="quiz-question" data-q="0" data-answer="1">
+        <p class="text-sm font-semibold text-white mb-3">1. The output image looks exactly like the input — same cars, same people, same sky. What do you tag it?</p>
+        <div class="space-y-2">
+          <div class="quiz-opt" onclick="selectAnswer(0, 0, this)">Ready</div>
+          <div class="quiz-opt" onclick="selectAnswer(0, 1, this)">Regenerate</div>
+          <div class="quiz-opt" onclick="selectAnswer(0, 2, this)">Needs Design Review</div>
+          <div class="quiz-opt" onclick="selectAnswer(0, 3, this)">Flag</div>
+        </div>
+        <p class="quiz-feedback hidden text-sm mt-2 font-medium"></p>
+      </div>
+
+      <!-- Q2 -->
+      <div class="quiz-question" data-q="1" data-answer="2">
+        <p class="text-sm font-semibold text-white mb-3">2. The output looks great but the store's sign is missing — you can see a blank wall where the logo should be. What do you tag it?</p>
+        <div class="space-y-2">
+          <div class="quiz-opt" onclick="selectAnswer(1, 0, this)">Ready</div>
+          <div class="quiz-opt" onclick="selectAnswer(1, 1, this)">Regenerate</div>
+          <div class="quiz-opt" onclick="selectAnswer(1, 2, this)">Needs Design Review</div>
+          <div class="quiz-opt" onclick="selectAnswer(1, 3, this)">Needs New Input</div>
+        </div>
+        <p class="quiz-feedback hidden text-sm mt-2 font-medium"></p>
+      </div>
+
+      <!-- Q3 -->
+      <div class="quiz-question" data-q="2" data-answer="1">
+        <p class="text-sm font-semibold text-white mb-3">3. The input photo shows a close-up of a bowl of ramen — not the restaurant exterior at all. What do you tag it?</p>
+        <div class="space-y-2">
+          <div class="quiz-opt" onclick="selectAnswer(2, 0, this)">Ready</div>
+          <div class="quiz-opt" onclick="selectAnswer(2, 1, this)">Needs New Input</div>
+          <div class="quiz-opt" onclick="selectAnswer(2, 2, this)">Regenerate</div>
+          <div class="quiz-opt" onclick="selectAnswer(2, 3, this)">Flag</div>
+        </div>
+        <p class="quiz-feedback hidden text-sm mt-2 font-medium"></p>
+      </div>
+
+    </div>
+
+    <div class="flex justify-end">
+      <button class="btn-next" id="quiz-next-btn" onclick="finishGuide()" disabled>Complete Guide →</button>
+    </div>
+  </div>
+
+  <!-- ─── SLIDE 8: Done ────────────────────────────────────────────── -->
+  <div class="slide flex-col items-center justify-center min-h-[70vh] text-center gap-6" data-slide="8">
+    <div class="text-5xl">✓</div>
+    <div class="space-y-2">
+      <h2 class="text-2xl font-bold text-white">You're ready to start</h2>
+      <p class="text-slate-400 text-sm max-w-sm mx-auto">You've read the full guideline and answered all questions correctly.</p>
+    </div>
+    <button class="btn-next text-base px-8 py-3" onclick="returnToTest()">Start the Test →</button>
+  </div>
+
+</div>
+
+<!-- Fixed bottom nav (prev button) -->
+<div class="fixed bottom-0 left-0 right-0 bg-slate-900 border-t border-slate-800 px-6 py-3 flex items-center justify-between" id="bottom-nav">
+  <button onclick="prevSlide()" id="prev-btn" class="text-sm text-slate-400 hover:text-white transition-colors disabled:opacity-0" disabled>← Back</button>
+  <span class="text-xs text-slate-600" id="slide-hint"></span>
+  <div></div>
+</div>
+
+<script>
+const TOTAL_SLIDES = 9; // 0-8
+let currentSlide = 0;
+const quizAnswers = [null, null, null]; // user's picks
+const correctAnswers = [1, 2, 1];      // correct indices
+const feedbackText = [
+  ['Incorrect — the images are too similar, this needs to be regenerated.', 'Correct! Too similar = Regenerate.', 'Incorrect — Design Review is for fixable edits, not for similar images.', 'Incorrect — Flag is for skip categories like banks, churches, etc.'],
+  ['Incorrect — the output is missing the sign, it needs a design fix.', 'Incorrect — Regenerate is for severe AI problems. A missing sign is fixable.', 'Correct! A missing sign is a quick design fix.', 'Incorrect — Needs New Input is when the input photo itself is unusable.'],
+  ['Incorrect — Ready means the output looks good.', 'Correct! The input photo is unusable (food photo instead of storefront).', 'Incorrect — Regenerate is for bad AI output, not bad input.', 'Incorrect — Flag is for skip-category locations, not bad input photos.'],
+];
+
+function goToSlide(n) {
+  document.querySelectorAll('.slide').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.slide')[n].classList.add('active');
+  currentSlide = n;
+  updateProgress();
+  window.scrollTo(0, 0);
+}
+
+function nextSlide() { if (currentSlide < TOTAL_SLIDES - 1) goToSlide(currentSlide + 1); }
+function prevSlide()  { if (currentSlide > 0) goToSlide(currentSlide - 1); }
+
+function updateProgress() {
+  const dots = document.getElementById('progress-dots');
+  const label = document.getElementById('progress-label');
+  const prevBtn = document.getElementById('prev-btn');
+  const hint = document.getElementById('slide-hint');
+  const displaySlides = TOTAL_SLIDES - 1; // exclude done slide from dots
+
+  dots.innerHTML = '';
+  for (let i = 0; i < displaySlides; i++) {
+    const d = document.createElement('div');
+    d.className = 'progress-dot ' + (i < currentSlide ? 'done' : i === currentSlide ? 'current' : '');
+    dots.appendChild(d);
+  }
+
+  const displayN = Math.min(currentSlide + 1, displaySlides);
+  label.textContent = `${displayN} / ${displaySlides}`;
+  prevBtn.disabled = currentSlide === 0;
+
+  const hints = ['', 'Read carefully', '', '', '', '', '', 'Answer all 3 to continue', ''];
+  hint.textContent = hints[currentSlide] || '';
+}
+
+function selectAnswer(qIdx, choiceIdx, el) {
+  const question = document.querySelectorAll('.quiz-question')[qIdx];
+  const opts = question.querySelectorAll('.quiz-opt');
+  const feedback = question.querySelector('.quiz-feedback');
+
+  // Already answered correctly — don't allow changes
+  if (quizAnswers[qIdx] === correctAnswers[qIdx]) return;
+
+  opts.forEach(o => o.classList.remove('correct', 'wrong'));
+  const isCorrect = choiceIdx === correctAnswers[qIdx];
+  el.classList.add(isCorrect ? 'correct' : 'wrong');
+  if (!isCorrect) opts[correctAnswers[qIdx]].classList.add('correct');
+
+  quizAnswers[qIdx] = choiceIdx;
+  feedback.textContent = feedbackText[qIdx][choiceIdx];
+  feedback.className = 'quiz-feedback text-sm mt-2 font-medium ' + (isCorrect ? 'text-green-400' : 'text-red-400');
+
+  // Lock options after answering
+  opts.forEach(o => { o.style.pointerEvents = 'none'; });
+
+  checkQuizComplete();
+}
+
+function checkQuizComplete() {
+  const allCorrect = quizAnswers.every((a, i) => a === correctAnswers[i]);
+  document.getElementById('quiz-next-btn').disabled = !allCorrect;
+}
+
+function finishGuide() {
+  // Mark completion in sessionStorage so index.html knows
+  sessionStorage.setItem('guidelineComplete', '1');
+  goToSlide(8);
+}
+
+function returnToTest() {
+  window.location.href = 'index.html';
+}
+
+function openLightbox(src) {
+  document.getElementById('lightbox-img').src = src;
+  document.getElementById('lightbox').classList.add('open');
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('open');
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
+
+// Init
+updateProgress();
+</script>
+</body>
+</html>
