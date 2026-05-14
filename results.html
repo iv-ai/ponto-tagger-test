@@ -645,8 +645,17 @@ async function generateFeedbackLink() {
     });
   });
 
+  const total = template.filter(item => masterKey?.[item.place_id]?.tag).length;
+
   const data = {
-    candidates: subs.map(s => ({ name: s.tester_name, email: s.tester_email || '' })),
+    candidates: subs.map(s => {
+      const correct = template.filter(item => {
+        const m = masterKey?.[item.place_id];
+        const a = s.items.find(i => i.place_id === item.place_id);
+        return m?.tag && a?.tag === m.tag;
+      }).length;
+      return { name: s.tester_name, email: s.tester_email || '', correct, total };
+    }),
     items: wrongItems.map(item => {
       const masterAns = masterKey[item.place_id];
       return {

@@ -40,8 +40,10 @@
   <div class="space-y-1">
     <p class="text-xs text-gray-400 uppercase tracking-wide font-semibold">Ponto QA Tagger Test</p>
     <h1 class="text-2xl font-bold text-gray-900">Feedback</h1>
-    <p class="text-sm text-gray-500" id="meta-candidates"></p>
   </div>
+
+  <!-- Score cards -->
+  <div id="score-cards" class="flex flex-wrap gap-3"></div>
 
   <!-- Intro note -->
   <div class="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-sm text-blue-800">
@@ -104,8 +106,26 @@ function render(payload) {
   document.getElementById('main').classList.remove('hidden');
 
   const names = candidates.map(c => c.name).join(', ');
-  document.getElementById('meta-candidates').textContent = `For: ${names}`;
   document.title = `Feedback — ${names}`;
+
+  // Score cards
+  const scoreContainer = document.getElementById('score-cards');
+  candidates.forEach(c => {
+    const haScore = c.correct != null && c.total;
+    const pct = haScore ? Math.round(c.correct / c.total * 100) : null;
+    const color = pct == null ? '#94a3b8' : pct >= 80 ? '#15803d' : pct >= 60 ? '#a16207' : '#b91c1c';
+    const card = document.createElement('div');
+    card.style.cssText = 'background:white;border:1px solid #e2e8f0;border-radius:0.75rem;padding:0.875rem 1.25rem;min-width:160px;';
+    card.innerHTML = `
+      <p style="font-size:0.8rem;font-weight:600;color:#1e293b;margin-bottom:0.25rem;">${c.name}</p>
+      ${c.email ? `<p style="font-size:0.7rem;color:#94a3b8;margin-bottom:0.5rem;">${c.email}</p>` : ''}
+      ${haScore ? `
+        <p style="font-size:1.5rem;font-weight:700;color:${color};line-height:1;">${pct}%</p>
+        <p style="font-size:0.7rem;color:#94a3b8;margin-top:0.15rem;">${c.correct} / ${c.total} correct</p>
+      ` : ''}
+    `;
+    scoreContainer.appendChild(card);
+  });
 
   const container = document.getElementById('items-list');
   items.forEach((item, idx) => {
