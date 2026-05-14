@@ -281,13 +281,18 @@ function renderMasterList() {
         <p class="text-xs font-medium text-gray-800 truncate">${item.name}</p>
         <p class="text-xs text-gray-400 truncate">${item.address}</p>
       </div>
-      <div class="flex gap-2 flex-1" id="tags-${item.place_id}">
+      <div class="flex gap-2 flex-wrap" id="tags-${item.place_id}">
         ${STATUS_KEYS.map(s => `
           <button class="tag-btn ${TAG_CLASS[s]} ${current === s ? 'active' : ''}"
             onclick="setTag('${item.place_id}', '${s}')">
             ${STATUS_LABELS[s]}
           </button>`).join('')}
       </div>
+      <input type="text" id="comment-${item.place_id}"
+        class="flex-1 min-w-0 text-xs text-gray-600 placeholder-gray-300"
+        placeholder="Note / explanation (optional)"
+        value="${(masterData[item.place_id]?.comment || '').replace(/"/g, '&quot;')}"
+        oninput="setComment('${item.place_id}', this.value)" />
     `;
     container.appendChild(div);
   });
@@ -311,6 +316,11 @@ function setTag(placeId, tag) {
   document.getElementById('master-status-chip').textContent = `${tagged} / ${itemsList.length} tagged`;
 }
 
+function setComment(placeId, value) {
+  if (!masterData[placeId]) masterData[placeId] = { tag: '', comment: '' };
+  masterData[placeId].comment = value;
+}
+
 async function saveMasterKey() {
   if (!itemsList.length) {
     showToast('Cannot save — items list not loaded. Try clicking Load again.', 'error');
@@ -327,17 +337,23 @@ async function saveMasterKey() {
     }));
     // Sanity check — never send empty items
     if (!items.length) throw new Error('Items list empty after mapping — aborting to protect master key.');
+    const taggedCount = items.filter(i => i.tag).length;
+    console.log(`Saving master key: ${taggedCount}/${items.length} tagged`, items.slice(0,3));
     await fetch(scriptUrl, {
       method: 'POST', mode: 'no-cors',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'saveMaster', items }),
     });
-    // Reload master from sheet to confirm it saved
+    // Wait briefly then re-fetch to confirm
+    await new Promise(r => setTimeout(r, 1500));
     const verify = await fetch(scriptUrl);
     const data = await verify.json();
     const saved = data.master || {};
     const savedCount = Object.values(saved).filter(v => v.tag).length;
+    console.log(`Verify: sheet now has ${savedCount} tagged items`);
     masterData = saved;
+    // Re-render tag buttons to reflect confirmed saved state
+    renderMasterList();
     document.getElementById('master-status-chip').textContent = `${savedCount} / ${itemsList.length} tagged`;
     showToast(`Answer key saved ✓ (${savedCount} tagged)`, 'success');
   } catch(e) {
