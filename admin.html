@@ -193,7 +193,8 @@ const STATUS_LABELS = { ready: 'Ready', design: 'Design Review', regenerate: 'Re
 const STATUS_KEYS   = ['ready', 'design', 'regenerate', 'newinput', 'flagged'];
 const TAG_CLASS     = { ready: 'tag-ready', design: 'tag-design', regenerate: 'tag-regen', newinput: 'tag-newinput', flagged: 'tag-flagged' };
 
-let scriptUrl = localStorage.getItem(SCRIPT_URL_KEY) || '';
+const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzLqCcIkx38nCnnqbm4ZMULzX0Q1SZSaRsMurHTAz5GuvA4Vx9RoNd2iDxar2LLDr4WkQ/exec';
+let scriptUrl = localStorage.getItem(SCRIPT_URL_KEY) || DEFAULT_SCRIPT_URL;
 let masterData = {};   // { place_id: { tag, comment } }
 let itemsList  = [];   // ordered list from index.html ITEMS
 let pendingSwap = null;

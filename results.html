@@ -222,7 +222,8 @@
 
 <script>
 // ─── CONFIG ──────────────────────────────────────────────────────────────────
-let SCRIPT_URL = localStorage.getItem('ponto_script_url') || '';
+const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzLqCcIkx38nCnnqbm4ZMULzX0Q1SZSaRsMurHTAz5GuvA4Vx9RoNd2iDxar2LLDr4WkQ/exec';
+let SCRIPT_URL = localStorage.getItem('ponto_script_url') || DEFAULT_SCRIPT_URL;
 let masterKey = null;      // { place_id: { tag, comment } }
 let allSubmissions = [];
 
