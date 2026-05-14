@@ -33,8 +33,8 @@ function doPost(e) {
     }
 
     if (payload.action === 'saveFeedback') {
-      const id = saveFeedback(ss, payload.data);
-      return ok({ id });
+      saveFeedback(ss, payload.id, payload.data);
+      return ok({ saved: true });
     }
 
     // Default: candidate submission
@@ -104,7 +104,7 @@ function getMaster(ss) {
 
 // ─── FEEDBACK STORAGE ────────────────────────────────────────────────────────
 
-function saveFeedback(ss, data) {
+function saveFeedback(ss, id, data) {
   let sheet = ss.getSheetByName(FEEDBACK_SHEET_NAME);
   if (!sheet) {
     sheet = ss.insertSheet(FEEDBACK_SHEET_NAME);
@@ -113,7 +113,6 @@ function saveFeedback(ss, data) {
     sheet.setFrozenRows(1);
   }
 
-  const id = makeId();
   sheet.appendRow([id, new Date().toISOString(), JSON.stringify(data)]);
   return id;
 }
@@ -126,13 +125,6 @@ function getFeedback(ss, id) {
     if (data[i][0] === id) return JSON.parse(data[i][2]);
   }
   return null;
-}
-
-function makeId() {
-  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
-  let id = '';
-  for (let i = 0; i < 6; i++) id += chars[Math.floor(Math.random() * chars.length)];
-  return id;
 }
 
 // ─── PLACES ──────────────────────────────────────────────────────────────────

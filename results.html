@@ -663,25 +663,21 @@ async function generateFeedbackLink() {
     }),
   };
 
-  // Save payload to sheet, get back a short ID
+  // Generate ID client-side, POST fire-and-forget (no-cors — can't read response)
+  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+  const id = Array.from({length: 6}, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+
+  fetch(SCRIPT_URL, {
+    method: 'POST', mode: 'no-cors',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'saveFeedback', id, data }),
+  });
+
+  const base = location.origin + location.pathname.replace('results.html', 'feedback.html');
   const linkOut = document.getElementById('feedback-link-output');
   const linkRow = document.getElementById('feedback-link-row');
-  linkOut.value = 'Generating…';
+  linkOut.value = `${base}?id=${id}`;
   linkRow.classList.remove('hidden');
-
-  try {
-    const resp = await fetch(SCRIPT_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'saveFeedback', data }),
-    });
-    const result = await resp.json();
-    if (!result.id) throw new Error(result.error || 'No ID returned');
-    const base = location.origin + location.pathname.replace('results.html', 'feedback.html');
-    linkOut.value = `${base}?id=${result.id}`;
-  } catch(err) {
-    linkOut.value = 'Error: ' + err.message;
-  }
 }
 
 function copyFeedbackLink() {
