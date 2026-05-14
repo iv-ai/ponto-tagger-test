@@ -383,6 +383,27 @@
   </div>
 </div>
 
+<!-- SCREEN: Tagger Results (shown after submission for type=tagger) -->
+<div id="screen-tagger-results" class="screen">
+  <div class="max-w-3xl mx-auto px-6 py-10 space-y-6">
+    <div class="text-center space-y-2">
+      <h2 class="text-2xl font-bold text-gray-900">Your Results</h2>
+      <p class="text-gray-500 text-sm">Here's how you did on the calibration test.</p>
+    </div>
+    <!-- Score card -->
+    <div class="card p-6 text-center space-y-1" id="tagger-score-card">
+      <p class="text-5xl font-bold" id="tagger-score-pct">—</p>
+      <p class="text-gray-400 text-sm" id="tagger-score-fraction"></p>
+      <div class="w-full bg-gray-100 rounded-full h-2 mt-3 max-w-xs mx-auto">
+        <div class="h-2 rounded-full bg-blue-500" id="tagger-score-bar" style="width:0%"></div>
+      </div>
+    </div>
+    <!-- Per-item breakdown -->
+    <div id="tagger-results-list" class="space-y-3"></div>
+    <p class="text-xs text-gray-400 text-center">Results are shared with the admin team for calibration review.</p>
+  </div>
+</div>
+
 <!-- Toast container -->
 <div class="toast-container" id="toast-container"></div>
 
@@ -390,6 +411,7 @@
 // ─── CONFIG ────────────────────────────────────────────────────────────────
 // Replace with your deployed Google Apps Script URL after setup
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzLqCcIkx38nCnnqbm4ZMULzX0Q1SZSaRsMurHTAz5GuvA4Vx9RoNd2iDxar2LLDr4WkQ/exec';
+const TESTER_TYPE = (new URLSearchParams(location.search).get('type') === 'tagger') ? 'tagger' : 'candidate';
 
 // ─── SAMPLE DATA (30 items — replace inputLink/outputLink with real URLs) ──
 const ITEMS = [
@@ -746,6 +768,7 @@ async function submitResults() {
   const payload = {
     tester_name: testerName,
     tester_email: testerEmail,
+    tester_type: TESTER_TYPE,
     submitted_at: new Date().toISOString(),
     items: ITEMS.map((item, i) => ({
       index: i + 1,
@@ -772,11 +795,83 @@ async function submitResults() {
         body: JSON.stringify(payload),
       });
     }
-    showScreen('done');
+    if (TESTER_TYPE === 'tagger') {
+      await showTaggerResults(payload);
+    } else {
+      showScreen('done');
+    }
   } catch (err) {
     showScreen('submit');
     showToast('Submission failed. Please try again.', 'error');
     console.error(err);
+  }
+}
+
+async function showTaggerResults(payload) {
+  // Fetch master key to compare against
+  let masterKey = null;
+  try {
+    const resp = await fetch(APPS_SCRIPT_URL);
+    const data = await resp.json();
+    masterKey = data.master || null;
+  } catch(e) { /* show results without scoring if fetch fails */ }
+
+  showScreen('tagger-results');
+
+  const TAG_LABELS = { ready: 'Ready', design: 'Design Review', regenerate: 'Regenerate', newinput: 'New Input', flagged: 'Flag' };
+  const TAG_COLORS = { ready: 'bg-green-100 text-green-700', design: 'bg-purple-100 text-purple-700', regenerate: 'bg-yellow-100 text-yellow-700', newinput: 'bg-blue-100 text-blue-700', flagged: 'bg-red-100 text-red-700' };
+
+  let correct = 0, total = 0;
+  const list = document.getElementById('tagger-results-list');
+  list.innerHTML = '';
+
+  payload.items.forEach((item, idx) => {
+    const masterAns = masterKey?.[item.place_id];
+    const myTag = item.tag;
+    const isCorrect = masterAns && myTag && myTag === masterAns.tag;
+    const isWrong   = masterAns && myTag && myTag !== masterAns.tag;
+    if (masterAns && myTag) { total++; if (isCorrect) correct++; }
+
+    const div = document.createElement('div');
+    div.className = 'card p-4 ' + (isWrong ? 'border-red-200 bg-red-50/30' : isCorrect ? 'border-green-200' : '');
+    div.innerHTML = `
+      <div class="flex items-start gap-3">
+        <span class="text-xs text-gray-300 font-mono w-5 flex-shrink-0 text-right pt-0.5">${idx + 1}</span>
+        <div class="flex gap-2 flex-shrink-0">
+          ${item.input_url  ? `<img src="${item.input_url}"  style="width:56px;height:42px;object-fit:cover;border-radius:4px;border:1px solid #e2e8f0;" />` : ''}
+          ${item.output_url ? `<img src="${item.output_url}" style="width:56px;height:42px;object-fit:cover;border-radius:4px;border:1px solid #e2e8f0;" />` : ''}
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="text-xs font-medium text-gray-700 truncate">${item.place_name || item.place_id}</p>
+          <div class="flex items-center gap-2 mt-1.5 flex-wrap">
+            <span class="text-xs text-gray-400">Your answer:</span>
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${TAG_COLORS[myTag] || 'bg-gray-100 text-gray-400'}">${TAG_LABELS[myTag] || myTag || '—'}</span>
+            ${masterAns ? `
+              ${isCorrect ? '<span class="text-xs text-green-600 font-semibold">✓ Correct</span>' : ''}
+              ${isWrong ? `<span class="text-xs text-red-500 font-semibold">✗ Wrong</span>
+                <span class="text-xs text-gray-400">Correct:</span>
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${TAG_COLORS[masterAns.tag] || ''}">${TAG_LABELS[masterAns.tag] || masterAns.tag}</span>
+                ${masterAns.comment ? `<span class="text-xs text-gray-500 italic w-full mt-1">"${masterAns.comment}"</span>` : ''}` : ''}
+            ` : '<span class="text-xs text-gray-300">No answer key yet</span>'}
+          </div>
+        </div>
+      </div>`;
+    list.appendChild(div);
+  });
+
+  // Update score card
+  if (total > 0) {
+    const pct = Math.round(correct / total * 100);
+    const color = pct >= 80 ? '#15803d' : pct >= 60 ? '#a16207' : '#b91c1c';
+    const barColor = pct >= 80 ? 'bg-green-500' : pct >= 60 ? 'bg-yellow-400' : 'bg-red-400';
+    document.getElementById('tagger-score-pct').textContent = pct + '%';
+    document.getElementById('tagger-score-pct').style.color = color;
+    document.getElementById('tagger-score-fraction').textContent = `${correct} / ${total} correct`;
+    document.getElementById('tagger-score-bar').className = `h-2 rounded-full ${barColor}`;
+    document.getElementById('tagger-score-bar').style.width = pct + '%';
+  } else {
+    document.getElementById('tagger-score-pct').textContent = 'Submitted';
+    document.getElementById('tagger-score-fraction').textContent = 'Answer key not set yet — scores will be available once set.';
   }
 }
 

@@ -176,16 +176,22 @@ function saveSubmission(ss, payload) {
     sheet.getRange(1, 1, 1, headers.length).setFontWeight('bold').setBackground('#f1f5f9');
     sheet.setFrozenRows(1);
   } else {
-    // Migrate: insert tester_email column after tester_name if missing
+    // Migrate: insert missing columns if needed
     const headerRow = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
     if (!headerRow.includes('tester_email')) {
-      const nameCol = headerRow.indexOf('tester_name') + 1; // 1-based
+      const nameCol = headerRow.indexOf('tester_name') + 1;
       sheet.insertColumnAfter(nameCol);
       sheet.getRange(1, nameCol + 1).setValue('tester_email').setFontWeight('bold').setBackground('#f1f5f9');
       const lastRow = sheet.getLastRow();
-      if (lastRow > 1) {
-        sheet.getRange(2, nameCol + 1, lastRow - 1, 1).setValue('');
-      }
+      if (lastRow > 1) sheet.getRange(2, nameCol + 1, lastRow - 1, 1).setValue('');
+    }
+    const headerRow2 = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    if (!headerRow2.includes('tester_type')) {
+      const emailCol = headerRow2.indexOf('tester_email') + 1;
+      sheet.insertColumnAfter(emailCol);
+      sheet.getRange(1, emailCol + 1).setValue('tester_type').setFontWeight('bold').setBackground('#f1f5f9');
+      const lastRow = sheet.getLastRow();
+      if (lastRow > 1) sheet.getRange(2, emailCol + 1, lastRow - 1, 1).setValue('candidate');
     }
   }
   sheet.appendRow(buildRow(payload));
@@ -220,14 +226,14 @@ function getSubmissions(ss) {
         });
         i++;
       }
-      return { tester_name: obj.tester_name, tester_email: obj.tester_email || '', submitted_at: obj.submitted_at, items };
+      return { tester_name: obj.tester_name, tester_email: obj.tester_email || '', tester_type: obj.tester_type || 'candidate', submitted_at: obj.submitted_at, items };
     });
 }
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
 
 function buildHeaders(itemCount) {
-  const base = ['tester_name', 'tester_email', 'submitted_at'];
+  const base = ['tester_name', 'tester_email', 'tester_type', 'submitted_at'];
   const cols = [];
   for (let i = 1; i <= itemCount; i++) {
     cols.push(`item_${i}_place_id`, `item_${i}_place_name`, `item_${i}_address`,
@@ -237,7 +243,7 @@ function buildHeaders(itemCount) {
 }
 
 function buildRow(payload) {
-  const base = [payload.tester_name, payload.tester_email || '', payload.submitted_at];
+  const base = [payload.tester_name, payload.tester_email || '', payload.tester_type || 'candidate', payload.submitted_at];
   const cols = [];
   payload.items.forEach(item => {
     cols.push(item.place_id||'', item.place_name||'', item.address||'',

@@ -191,10 +191,13 @@
     <p class="text-gray-400 text-sm">Enter your Apps Script URL above and click Load Results.</p>
   </div>
 
-  <!-- Per-candidate summary cards -->
+  <!-- Candidates section -->
   <div id="candidate-summary" class="hidden space-y-3">
     <div class="flex items-center justify-between flex-wrap gap-3">
-      <h2 class="text-base font-semibold text-gray-800">Candidate Scores</h2>
+      <div>
+        <h2 class="text-base font-semibold text-gray-800">Candidates</h2>
+        <p class="text-xs text-gray-400">New applicants scored against the answer key</p>
+      </div>
       <div class="flex items-center gap-3">
         <span id="selection-count" class="text-xs text-gray-400 hidden"></span>
         <button id="feedback-btn" class="btn btn-primary hidden" onclick="openFeedbackModal()">
@@ -203,6 +206,17 @@
       </div>
     </div>
     <div id="candidate-cards" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+  </div>
+
+  <!-- Taggers section -->
+  <div id="tagger-summary" class="hidden space-y-3">
+    <div class="flex items-center justify-between flex-wrap gap-3">
+      <div>
+        <h2 class="text-base font-semibold text-gray-800">Working Taggers</h2>
+        <p class="text-xs text-gray-400">Existing taggers taking the calibration test</p>
+      </div>
+    </div>
+    <div id="tagger-cards" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
   </div>
 
   <!-- Results table -->
@@ -225,8 +239,9 @@
 // ─── CONFIG ──────────────────────────────────────────────────────────────────
 const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzLqCcIkx38nCnnqbm4ZMULzX0Q1SZSaRsMurHTAz5GuvA4Vx9RoNd2iDxar2LLDr4WkQ/exec';
 let SCRIPT_URL = localStorage.getItem('ponto_script_url') || DEFAULT_SCRIPT_URL;
-let masterKey = null;      // { place_id: { tag, comment } }
-let allSubmissions = [];
+let masterKey = null;
+let allSubmissions = [];   // candidates only
+let allTaggers = [];       // working taggers
 
 if (SCRIPT_URL) {
   document.getElementById('script-url-input').value = SCRIPT_URL;
@@ -252,7 +267,9 @@ async function loadData() {
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     const data = await resp.json();
     masterKey = data.master || null;
-    allSubmissions = (data.submissions || []).filter(s => s.tester_name !== 'poiMaster');
+    const subs = (data.submissions || []).filter(s => s.tester_name !== 'poiMaster');
+    allSubmissions = subs.filter(s => s.tester_type !== 'tagger');
+    allTaggers     = subs.filter(s => s.tester_type === 'tagger');
     render();
   } catch (e) {
     showLoading(false);
@@ -288,6 +305,10 @@ function render() {
   if (allSubmissions.length) {
     document.getElementById('candidate-summary').classList.remove('hidden');
     renderCandidateCards();
+  }
+  if (allTaggers.length) {
+    document.getElementById('tagger-summary').classList.remove('hidden');
+    renderTaggerCards();
   }
 }
 
@@ -325,8 +346,9 @@ function scoreColor(pct) {
 }
 
 function renderStats() {
-  const scores = allSubmissions.map(s => score(s)).filter(Boolean);
-  document.getElementById('stat-submissions').textContent = allSubmissions.length;
+  const allSubs = [...allSubmissions, ...allTaggers];
+  const scores = allSubs.map(s => score(s)).filter(Boolean);
+  document.getElementById('stat-submissions').textContent = allSubs.length;
   document.getElementById('stat-items').textContent = allSubmissions[0]?.items.length || (masterKey ? Object.keys(masterKey).length : '—');
   document.getElementById('stat-master').textContent = masterKey ? '✓' : '✗';
   document.getElementById('stat-master').className = 'text-2xl font-bold ' + (masterKey ? 'text-green-600' : 'text-red-400');
@@ -346,7 +368,7 @@ function renderTable() {
   const headerRow = document.getElementById('table-header-row');
   // Remove old tagger columns
   headerRow.querySelectorAll('.tagger-col').forEach(th => th.remove());
-  allSubmissions.forEach(sub => {
+  [...allSubmissions, ...allTaggers].forEach(sub => {
     const sc = score(sub);
     const th = document.createElement('th');
     th.className = 'tagger-col px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide border-l text-center';
@@ -358,7 +380,8 @@ function renderTable() {
   const tbody = document.getElementById('results-tbody');
   tbody.innerHTML = '';
 
-  const template = allSubmissions[0]?.items || (masterKey ? Object.keys(masterKey).map((id, i) => ({ index: i+1, place_id: id })) : []);
+  const allSubs2 = [...allSubmissions, ...allTaggers];
+  const template = allSubs2[0]?.items || (masterKey ? Object.keys(masterKey).map((id, i) => ({ index: i+1, place_id: id })) : []);
 
   template.forEach((item, idx) => {
     const tr = document.createElement('tr');
@@ -390,8 +413,8 @@ function renderTable() {
     tr.appendChild(tdImg);
     tr.appendChild(tdMaster);
 
-    // Tagger columns
-    allSubmissions.forEach(sub => {
+    // All submission columns
+    [...allSubmissions, ...allTaggers].forEach(sub => {
       const ans = sub.items.find(it => it.place_id === item.place_id);
       const tag = ans?.tag || '';
       const isCorrect = masterKey && masterAns && tag === masterAns.tag;
@@ -442,6 +465,53 @@ function renderCandidateCards() {
             ${sub.tester_email ? `<p class="text-xs text-blue-500">${sub.tester_email}</p>` : ''}
             <p class="text-xs text-gray-400">${sub.submitted_at ? new Date(sub.submitted_at).toLocaleString() : ''}</p>
           </div>
+        </div>
+        <div class="text-right flex-shrink-0">
+          ${sc ? `<div class="score-chip text-sm font-bold px-2 py-0.5 ${scoreColor(sc.pct)}">${sc.pct}%</div>
+            <div class="text-xs text-gray-400 mt-0.5">${sc.correct}/${sc.total} correct</div>` :
+            `<div class="score-chip bg-gray-100 text-gray-400">No key</div>`}
+        </div>
+      </div>
+      ${sc ? `<div class="w-full bg-gray-100 rounded-full h-1.5">
+        <div class="h-1.5 rounded-full ${sc.pct >= 80 ? 'bg-green-500' : sc.pct >= 60 ? 'bg-yellow-400' : 'bg-red-400'}" style="width:${sc.pct}%"></div>
+      </div>` : ''}
+      <div class="grid grid-cols-3 gap-1.5 text-center text-xs">
+        <div class="bg-gray-50 rounded p-1.5"><p class="text-gray-400">Tagged</p><p class="font-semibold">${tagged}/${sub.items.length}</p></div>
+        <div class="bg-green-50 rounded p-1.5"><p class="text-gray-400">Ready</p><p class="font-semibold text-green-600">${counts.ready}</p></div>
+        <div class="bg-purple-50 rounded p-1.5"><p class="text-gray-400">Design</p><p class="font-semibold text-purple-600">${counts.design}</p></div>
+        <div class="bg-yellow-50 rounded p-1.5"><p class="text-gray-400">Regen</p><p class="font-semibold text-yellow-600">${counts.regenerate}</p></div>
+        <div class="bg-blue-50 rounded p-1.5"><p class="text-gray-400">New Input</p><p class="font-semibold text-blue-600">${counts.newinput}</p></div>
+        <div class="bg-red-50 rounded p-1.5"><p class="text-gray-400">Flag</p><p class="font-semibold text-red-600">${counts.flagged}</p></div>
+      </div>
+      ${wrongCount !== null ? `<p class="text-xs text-gray-400 text-center">Click to see ${wrongCount} wrong answer${wrongCount !== 1 ? 's' : ''} →</p>` : '<p class="text-xs text-gray-400 text-center">Click to view details →</p>'}`;
+    container.appendChild(card);
+  });
+}
+
+function renderTaggerCards() {
+  const container = document.getElementById('tagger-cards');
+  container.innerHTML = '';
+  const sorted = [...allTaggers].sort((a, b) => (score(b)?.pct ?? -1) - (score(a)?.pct ?? -1));
+  sorted.forEach((sub, rank) => {
+    const sc = score(sub);
+    const counts = { ready: 0, design: 0, regenerate: 0, newinput: 0, flagged: 0, empty: 0 };
+    sub.items.forEach(it => { if (it.tag && counts[it.tag] !== undefined) counts[it.tag]++; else counts.empty++; });
+    const tagged = sub.items.length - counts.empty;
+    const wrongCount = sc ? (sc.total - sc.correct) : null;
+    const card = document.createElement('div');
+    card.className = 'candidate-card bg-white rounded-lg border border-indigo-100 p-4 space-y-3';
+    card.title = 'Click to see full breakdown';
+    card.onclick = () => openDrawer(sub);
+    card.innerHTML = `
+      <div class="flex items-start justify-between gap-2">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-bold text-gray-400">#${rank + 1}</span>
+            <p class="font-semibold text-gray-900">${sub.tester_name}</p>
+            <span class="text-xs bg-indigo-100 text-indigo-700 font-semibold px-1.5 py-0.5 rounded">Tagger</span>
+          </div>
+          ${sub.tester_email ? `<p class="text-xs text-blue-500">${sub.tester_email}</p>` : ''}
+          <p class="text-xs text-gray-400">${sub.submitted_at ? new Date(sub.submitted_at).toLocaleString() : ''}</p>
         </div>
         <div class="text-right flex-shrink-0">
           ${sc ? `<div class="score-chip text-sm font-bold px-2 py-0.5 ${scoreColor(sc.pct)}">${sc.pct}%</div>
