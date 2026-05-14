@@ -2,15 +2,18 @@
 // Deploy as: Web App → Execute as Me → Anyone can access
 //
 // POST actions (sent as JSON with an "action" field):
-//   action: "submit"       — candidate submission (or poiMaster answer key)
-//   action: "saveMaster"   — admin overwrites master key answers
-//   action: "updatePlace"  — admin swaps a place entry in the Places sheet
+//   action: "submit"        — candidate submission (or poiMaster answer key)
+//   action: "saveMaster"    — admin overwrites master key answers
+//   action: "updatePlace"   — admin swaps a place entry in the Places sheet
+//   action: "saveFeedback"  — store a feedback payload, returns { id }
 //
 // GET  — returns { master, submissions, places }
+// GET ?id=XXXX — returns { feedback: <payload> }
 
-const SHEET_NAME        = 'Submissions';
-const MASTER_SHEET_NAME = 'Master';
-const PLACES_SHEET_NAME = 'Places';
+const SHEET_NAME          = 'Submissions';
+const MASTER_SHEET_NAME   = 'Master';
+const PLACES_SHEET_NAME   = 'Places';
+const FEEDBACK_SHEET_NAME = 'Feedback';
 
 // ─── ROUTER ──────────────────────────────────────────────────────────────────
 
@@ -27,6 +30,11 @@ function doPost(e) {
     if (payload.action === 'updatePlace') {
       updatePlace(ss, payload.place);
       return ok({ saved: true });
+    }
+
+    if (payload.action === 'saveFeedback') {
+      const id = saveFeedback(ss, payload.data);
+      return ok({ id });
     }
 
     // Default: candidate submission
@@ -46,6 +54,14 @@ function doPost(e) {
 function doGet(e) {
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+    // ?id=XXXX — return a single feedback payload
+    if (e.parameter && e.parameter.id) {
+      const data = getFeedback(ss, e.parameter.id);
+      if (!data) return error('Feedback not found');
+      return ok({ feedback: data });
+    }
+
     return ok({
       master:      getMaster(ss),
       submissions: getSubmissions(ss),
@@ -86,6 +102,39 @@ function getMaster(ss) {
   return master;
 }
 
+// ─── FEEDBACK STORAGE ────────────────────────────────────────────────────────
+
+function saveFeedback(ss, data) {
+  let sheet = ss.getSheetByName(FEEDBACK_SHEET_NAME);
+  if (!sheet) {
+    sheet = ss.insertSheet(FEEDBACK_SHEET_NAME);
+    sheet.getRange(1, 1, 1, 3).setValues([['id', 'created_at', 'payload']]);
+    sheet.getRange(1, 1, 1, 3).setFontWeight('bold').setBackground('#f1f5f9');
+    sheet.setFrozenRows(1);
+  }
+
+  const id = makeId();
+  sheet.appendRow([id, new Date().toISOString(), JSON.stringify(data)]);
+  return id;
+}
+
+function getFeedback(ss, id) {
+  const sheet = ss.getSheetByName(FEEDBACK_SHEET_NAME);
+  if (!sheet) return null;
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0] === id) return JSON.parse(data[i][2]);
+  }
+  return null;
+}
+
+function makeId() {
+  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+  let id = '';
+  for (let i = 0; i < 6; i++) id += chars[Math.floor(Math.random() * chars.length)];
+  return id;
+}
+
 // ─── PLACES ──────────────────────────────────────────────────────────────────
 
 function updatePlace(ss, place) {
@@ -98,7 +147,6 @@ function updatePlace(ss, place) {
   }
 
   const data = sheet.getDataRange().getValues();
-  // Try to find existing row by place_id or index
   for (let i = 1; i < data.length; i++) {
     if (data[i][0] == place.index || data[i][1] === place.place_id) {
       sheet.getRange(i + 1, 1, 1, 6).setValues([[
@@ -107,7 +155,6 @@ function updatePlace(ss, place) {
       return;
     }
   }
-  // Not found — append
   sheet.appendRow([place.index, place.place_id, place.name, place.address, place.input_url, place.output_url]);
 }
 
@@ -143,7 +190,6 @@ function saveSubmission(ss, payload) {
       const nameCol = headerRow.indexOf('tester_name') + 1; // 1-based
       sheet.insertColumnAfter(nameCol);
       sheet.getRange(1, nameCol + 1).setValue('tester_email').setFontWeight('bold').setBackground('#f1f5f9');
-      // Back-fill empty string for all existing rows
       const lastRow = sheet.getLastRow();
       if (lastRow > 1) {
         sheet.getRange(2, nameCol + 1, lastRow - 1, 1).setValue('');

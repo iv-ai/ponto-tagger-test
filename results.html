@@ -643,31 +643,45 @@ async function generateFeedbackLink() {
     });
   });
 
-  // Strip image paths to filenames only (strip "images/" prefix) to keep URL short
-  const toFilename = url => (url || '').replace(/^.*images\//, '');
-
-  const payload = {
-    c: subs.map(s => ({ n: s.tester_name, e: s.tester_email || '' })),
-    i: wrongItems.map(item => {
+  const data = {
+    candidates: subs.map(s => ({ name: s.tester_name, email: s.tester_email || '' })),
+    items: wrongItems.map(item => {
       const masterAns = masterKey[item.place_id];
       return {
-        id: item.place_id,
-        in: toFilename(item.input_url),
-        ou: toFilename(item.output_url),
-        ok: masterAns.tag,
-        nt: feedbackNotes[item.place_id] || '',
-        ca: subs.map(sub => {
+        place_id:   item.place_id,
+        place_name: item.place_name || '',
+        address:    item.address || '',
+        input_url:  item.input_url || '',
+        output_url: item.output_url || '',
+        correct:    masterAns.tag,
+        note:       feedbackNotes[item.place_id] || '',
+        candidates: subs.map(sub => {
           const ans = sub.items.find(i => i.place_id === item.place_id);
-          return { n: sub.tester_name, t: ans?.tag || '' };
+          return { name: sub.tester_name, tag: ans?.tag || '', comment: ans?.comment || '' };
         }),
       };
     }),
   };
 
-  const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
-  const url = location.origin + location.pathname.replace('results.html', 'feedback.html') + '#' + encoded;
-  document.getElementById('feedback-link-output').value = url;
-  document.getElementById('feedback-link-row').classList.remove('hidden');
+  // Save payload to sheet, get back a short ID
+  const linkOut = document.getElementById('feedback-link-output');
+  const linkRow = document.getElementById('feedback-link-row');
+  linkOut.value = 'Generating…';
+  linkRow.classList.remove('hidden');
+
+  try {
+    const resp = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'saveFeedback', data }),
+    });
+    const result = await resp.json();
+    if (!result.id) throw new Error(result.error || 'No ID returned');
+    const base = location.origin + location.pathname.replace('results.html', 'feedback.html');
+    linkOut.value = `${base}?id=${result.id}`;
+  } catch(err) {
+    linkOut.value = 'Error: ' + err.message;
+  }
 }
 
 function copyFeedbackLink() {
