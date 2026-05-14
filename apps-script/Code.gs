@@ -159,26 +159,28 @@ function getSubmissions(ss) {
   const data = sheet.getDataRange().getValues();
   if (data.length < 2) return [];
   const headers = data[0];
-  return data.slice(1).map(row => {
-    const obj = {};
-    headers.forEach((h, i) => { obj[h] = row[i]; });
-    const items = [];
-    let i = 1;
-    while (obj['item_' + i + '_place_id'] !== undefined) {
-      items.push({
-        index:      i,
-        place_id:   obj['item_' + i + '_place_id'],
-        place_name: obj['item_' + i + '_place_name'],
-        address:    obj['item_' + i + '_address'],
-        input_url:  obj['item_' + i + '_input_url'],
-        output_url: obj['item_' + i + '_output_url'],
-        tag:        obj['item_' + i + '_tag'],
-        comment:    obj['item_' + i + '_comment'],
-      });
-      i++;
-    }
-    return { tester_name: obj.tester_name, tester_email: obj.tester_email || '', submitted_at: obj.submitted_at, items };
-  });
+  return data.slice(1)
+    .filter(row => row[headers.indexOf('tester_name')] !== '' && row[headers.indexOf('tester_name')] !== undefined)
+    .map(row => {
+      const obj = {};
+      headers.forEach((h, i) => { obj[h] = row[i]; });
+      const items = [];
+      let i = 1;
+      while (obj['item_' + i + '_place_id'] !== undefined) {
+        items.push({
+          index:      i,
+          place_id:   obj['item_' + i + '_place_id'],
+          place_name: obj['item_' + i + '_place_name'],
+          address:    obj['item_' + i + '_address'],
+          input_url:  obj['item_' + i + '_input_url'],
+          output_url: obj['item_' + i + '_output_url'],
+          tag:        obj['item_' + i + '_tag'],
+          comment:    obj['item_' + i + '_comment'],
+        });
+        i++;
+      }
+      return { tester_name: obj.tester_name, tester_email: obj.tester_email || '', submitted_at: obj.submitted_at, items };
+    });
 }
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
