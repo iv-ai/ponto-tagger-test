@@ -240,21 +240,18 @@ async function loadAll() {
 
 // Fetch the sibling index.html and parse ITEMS out of it
 async function loadItemsList() {
-  try {
-    const resp = await fetch('index.html');
-    const html = await resp.text();
-    const matches = [...html.matchAll(/\{\s*id:\s*"([^"]+)".*?name:\s*"([^"]+)".*?address:\s*"([^"]+)".*?inputLink:\s*"([^"]+)".*?outputLink:\s*"([^"]+)"/g)];
-    itemsList = matches.map((m, i) => ({
-      index: i + 1,
-      place_id:   m[1],
-      name:       m[2],
-      address:    m[3],
-      input_url:  m[4],
-      output_url: m[5],
-    }));
-  } catch(e) {
-    console.warn('Could not parse index.html items:', e);
-  }
+  const resp = await fetch('index.html');
+  const html = await resp.text();
+  const matches = [...html.matchAll(/\{\s*id:\s*"([^"]+)".*?name:\s*"([^"]+)".*?address:\s*"([^"]+)".*?inputLink:\s*"([^"]+)".*?outputLink:\s*"([^"]+)"/g)];
+  if (!matches.length) throw new Error('Could not parse ITEMS from index.html — 0 matches found.');
+  itemsList = matches.map((m, i) => ({
+    index: i + 1,
+    place_id:   m[1],
+    name:       m[2],
+    address:    m[3],
+    input_url:  m[4],
+    output_url: m[5],
+  }));
 }
 
 // ─── MASTER KEY EDITOR ────────────────────────────────────────────────────────
@@ -315,6 +312,10 @@ function setTag(placeId, tag) {
 }
 
 async function saveMasterKey() {
+  if (!itemsList.length) {
+    showToast('Cannot save — items list not loaded. Try clicking Load again.', 'error');
+    return;
+  }
   const btn = document.getElementById('save-master-btn');
   btn.disabled = true;
   btn.textContent = 'Saving…';
@@ -324,12 +325,21 @@ async function saveMasterKey() {
       tag:      masterData[item.place_id]?.tag || '',
       comment:  masterData[item.place_id]?.comment || '',
     }));
-    const resp = await fetch(scriptUrl, {
+    // Sanity check — never send empty items
+    if (!items.length) throw new Error('Items list empty after mapping — aborting to protect master key.');
+    await fetch(scriptUrl, {
       method: 'POST', mode: 'no-cors',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'saveMaster', items }),
     });
-    showToast('Answer key saved ✓', 'success');
+    // Reload master from sheet to confirm it saved
+    const verify = await fetch(scriptUrl);
+    const data = await verify.json();
+    const saved = data.master || {};
+    const savedCount = Object.values(saved).filter(v => v.tag).length;
+    masterData = saved;
+    document.getElementById('master-status-chip').textContent = `${savedCount} / ${itemsList.length} tagged`;
+    showToast(`Answer key saved ✓ (${savedCount} tagged)`, 'success');
   } catch(e) {
     showToast('Save failed: ' + e.message, 'error');
   }
