@@ -40,7 +40,6 @@
     <p class="text-xs text-gray-400 uppercase tracking-wide font-semibold">Ponto QA Tagger Test</p>
     <h1 class="text-2xl font-bold text-gray-900">Feedback</h1>
     <p class="text-sm text-gray-500" id="meta-candidates"></p>
-    <p class="text-xs text-gray-400" id="meta-date"></p>
   </div>
 
   <!-- Intro note -->
@@ -52,7 +51,6 @@
   <!-- Items -->
   <div id="items-list" class="space-y-4"></div>
 
-  <p class="text-xs text-gray-300 text-center pt-4" id="footer-date"></p>
 </div>
 
 <script>
@@ -78,60 +76,66 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbo
 try {
   const hash = location.hash.slice(1);
   if (!hash) throw new Error('empty');
-  const payload = JSON.parse(decodeURIComponent(escape(atob(hash))));
+  const p = JSON.parse(decodeURIComponent(escape(atob(hash))));
+
+  // Support both compact format (c/i keys) and old verbose format for backwards compat
+  const candidates = p.c || p.candidates || [];
+  const items      = p.i || p.items      || [];
 
   document.getElementById('main').classList.remove('hidden');
 
-  // Header
-  const names = payload.candidates.map(c => c.name).join(', ');
+  const names = candidates.map(c => c.n || c.name).join(', ');
   document.getElementById('meta-candidates').textContent = `For: ${names}`;
-  if (payload.generated_at) {
-    const d = new Date(payload.generated_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
-    document.getElementById('meta-date').textContent = `Generated ${d}`;
-    document.getElementById('footer-date').textContent = `Generated ${d}`;
-  }
   document.title = `Feedback — ${names}`;
 
-  // Items
   const container = document.getElementById('items-list');
-  payload.items.forEach((item, idx) => {
+  items.forEach((item, idx) => {
+    // Compact keys: id, in, ou, ok, nt, ca — fall back to verbose keys
+    const placeId   = item.id  || item.place_id   || '';
+    const inputFile = item.in  || item.input_url   || '';
+    const outFile   = item.ou  || item.output_url  || '';
+    const correct   = item.ok  || item.correct     || '';
+    const note      = item.nt  || item.note        || '';
+    const cands     = item.ca  || item.candidates  || [];
+
+    // If stored as bare filename, prepend images/ path
+    const imgBase = 'https://iv-ai.github.io/ponto-tagger-test/images/';
+    const inputUrl = inputFile.startsWith('http') ? inputFile : (inputFile ? imgBase + inputFile : '');
+    const outUrl   = outFile.startsWith('http')   ? outFile   : (outFile   ? imgBase + outFile   : '');
+
     const card = document.createElement('div');
     card.className = 'bg-white rounded-xl border border-gray-200 overflow-hidden';
     card.innerHTML = `
       <div class="px-5 py-4 border-b border-gray-50 flex items-center gap-3">
         <span class="text-xs text-gray-300 font-mono w-5 text-right flex-shrink-0">${idx + 1}</span>
-        <div>
-          <p class="font-semibold text-gray-900 text-sm">${item.place_name || item.place_id}</p>
-          <p class="text-xs text-gray-400">${item.address || ''}</p>
-        </div>
+        <p class="text-xs text-gray-400 font-mono truncate">${placeId}</p>
       </div>
       <div class="px-5 py-4 flex gap-4 flex-wrap">
-        <!-- Images -->
         <div class="flex gap-2 flex-shrink-0">
-          ${item.input_url  ? `<div class="space-y-1 text-center"><p class="text-xs text-gray-400">Input</p><img class="item-img" src="${item.input_url}"  onclick="openLightbox('${item.input_url}')"  /></div>` : ''}
-          ${item.output_url ? `<div class="space-y-1 text-center"><p class="text-xs text-gray-400">Output</p><img class="item-img" src="${item.output_url}" onclick="openLightbox('${item.output_url}')" /></div>` : ''}
+          ${inputUrl ? `<div class="space-y-1 text-center"><p class="text-xs text-gray-400">Input</p><img class="item-img" src="${inputUrl}" onclick="openLightbox('${inputUrl}')" /></div>` : ''}
+          ${outUrl   ? `<div class="space-y-1 text-center"><p class="text-xs text-gray-400">Output</p><img class="item-img" src="${outUrl}"   onclick="openLightbox('${outUrl}')"   /></div>` : ''}
         </div>
-        <!-- Tags -->
         <div class="flex-1 min-w-0 space-y-3">
           <div class="flex items-center gap-2 flex-wrap">
             <span class="text-xs font-semibold text-gray-500">Correct answer:</span>
-            <span class="tag-badge tag-${tagClass(item.correct)}">${tagLabel(item.correct)}</span>
+            <span class="tag-badge tag-${tagClass(correct)}">${tagLabel(correct)}</span>
           </div>
           <div class="space-y-1">
-            ${item.candidates.map(c => {
-              if (!c.tag) return '';
-              const wrong = c.tag !== item.correct;
+            ${cands.map(c => {
+              const cName = c.n || c.name || '';
+              const cTag  = c.t || c.tag  || '';
+              if (!cTag) return '';
+              const wrong = cTag !== correct;
               return `<div class="flex items-center gap-2 flex-wrap">
-                <span class="text-xs text-gray-500 w-28 truncate">${c.name}:</span>
-                <span class="tag-badge tag-${tagClass(c.tag)}" style="${wrong ? 'opacity:0.75;' : ''}">${tagLabel(c.tag)}</span>
+                <span class="text-xs text-gray-500 w-28 truncate">${cName}:</span>
+                <span class="tag-badge tag-${tagClass(cTag)}" style="${wrong ? 'opacity:0.75;' : ''}">${tagLabel(cTag)}</span>
                 <span class="text-xs ${wrong ? 'text-red-400' : 'text-green-500'}">${wrong ? '✗ wrong' : '✓ correct'}</span>
-                ${c.comment ? `<span class="text-xs text-gray-400 italic">"${c.comment}"</span>` : ''}
               </div>`;
             }).join('')}
           </div>
-          ${item.note ? `<div class="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5 mt-2">
+          ${note ? `<div class="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5 mt-2">
             <p class="text-xs font-semibold text-amber-700 mb-1">Reviewer note</p>
-            <p class="text-sm text-amber-900 whitespace-pre-wrap">${item.note}</p>
+            <p class="text-sm text-amber-900 whitespace-pre-wrap">${note}</p>
           </div>` : ''}
         </div>
       </div>`;
