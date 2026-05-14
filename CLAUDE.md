@@ -20,8 +20,9 @@ No build step. No framework. Pure HTML + vanilla JS + Tailwind CDN.
 ```
 GitHub Pages (static)
   index.html       — candidate test
-  results.html     — results viewer
+  results.html     — results viewer (includes feedback link generator)
   admin.html       — admin panel (passphrase: poiMaster)
+  feedback.html    — read-only shareable feedback page (no login needed)
   images/          — frozen test images (84 files, ~88MB)
 
 Google Apps Script (serverless backend)
@@ -159,6 +160,31 @@ Search for `poiMaster` in admin.html — it appears as the hardcoded passphrase 
 
 ---
 
+## Feedback link system
+
+`results.html` has a "Create Feedback Link" feature:
+1. Admin checks candidates in the results viewer
+2. A modal shows only items those candidates got wrong, with editable note fields pre-filled from master key comments
+3. "Generate Link" base64-encodes the full payload (candidates, wrong items, correct answers, notes) into a `feedback.html#<base64>` URL
+4. Admin copies and sends the URL — recipient opens `feedback.html` which decodes the hash and renders a read-only page
+
+`feedback.html` is fully static — no server, no login. Everything is in the URL hash.
+The payload structure:
+```js
+{
+  candidates: [{ name, email }],
+  items: [{
+    place_id, place_name, address, input_url, output_url,
+    correct,      // correct tag
+    note,         // reviewer's explanation
+    candidates: [{ name, tag, comment }]  // what each candidate answered
+  }],
+  generated_at: ISO string
+}
+```
+
+---
+
 ## Things to watch out for
 
 - **Apps Script CORS**: POST uses `mode: 'no-cors'` (response is unreadable but write succeeds). This is expected — don't "fix" it.
@@ -166,3 +192,4 @@ Search for `poiMaster` in admin.html — it appears as the hardcoded passphrase 
 - **poiMaster name**: Hardcoded in index.html submission handler, Code.gs, admin.html passphrase, and ADMIN docs. If renaming, update all five places.
 - **GitHub Pages branch**: Deploys from `main` at `/`. Pushes go live within ~30 seconds.
 - **Repo size**: `images/` is ~88MB. Keep in mind when adding more images.
+- **Feedback link size**: URL hash grows with item count and note length. For 42 items with long notes it stays well under browser URL limits, but don't add binary data.

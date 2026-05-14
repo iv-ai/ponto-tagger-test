@@ -11,6 +11,7 @@ Recruitment assessment for Ponto QA taggers. Candidates review 42 image pairs an
 | Candidate test | https://iv-ai.github.io/ponto-tagger-test/ |
 | Results viewer (admin) | https://iv-ai.github.io/ponto-tagger-test/results.html |
 | Admin panel (admin) | https://iv-ai.github.io/ponto-tagger-test/admin.html |
+| Feedback page | https://iv-ai.github.io/ponto-tagger-test/feedback.html |
 | Tagger guideline doc | https://docs.google.com/document/d/1jpt4PgX-0Yo_sU2m9X6-YY_41Zn8Fa9khp53dPNWw1k/edit?tab=t.0 |
 | Production tagger tool | https://iv-poi-ui-production-454568860704.us-west1.run.app/login |
 | Apps Script backend | https://script.google.com/macros/s/AKfycbzLqCcIkx38nCnnqbm4ZMULzX0Q1SZSaRsMurHTAz5GuvA4Vx9RoNd2iDxar2LLDr4WkQ/exec |
@@ -71,8 +72,9 @@ When unsure, flag it and leave a comment explaining why.
 
 ```
 index.html          — candidate test (42 items, guideline gate, submission)
-results.html        — admin results viewer (scores, table, detail drawer, CSV export)
+results.html        — admin results viewer (scores, detail drawer, feedback link generator, CSV export)
 admin.html          — admin panel (edit answer key, log place swaps)
+feedback.html       — read-only shareable feedback page (no login needed, data in URL hash)
 images/             — frozen copies of all 84 test images (42 input + 42 output)
 apps-script/
   Code.gs           — Google Apps Script backend (POST/GET web app)
@@ -90,6 +92,7 @@ README.md           — this file
 2. **Submission** POSTs to the Apps Script web app → written to Google Sheet (`Submissions` tab)
 3. **Answer key** is set via the admin panel or by submitting as `poiMaster` → written to `Master` tab
 4. **Results viewer** GETs from the Apps Script → scores each candidate against the master key, shows per-item breakdown in a click-through detail drawer
+5. **Feedback links** — admin selects candidates, edits per-item notes, generates a shareable URL → `feedback.html` decodes it and shows a clean read-only page (no login, no server)
 
 Item order is randomized per session (Fisher-Yates shuffle) so candidates can't copy each other.
 
@@ -152,7 +155,7 @@ SECTION 1 — IMPORTANT LINKS
 Candidate test (send this to applicants):
   https://iv-ai.github.io/ponto-tagger-test/
 
-Results viewer — see all submissions and scores (admin only):
+Results viewer — see scores, details, and create feedback links (admin only):
   https://iv-ai.github.io/ponto-tagger-test/results.html
 
 Admin panel — edit answer key, log place swaps (admin only):
@@ -370,4 +373,53 @@ Need to change the answer key
 
 Need to add a new test image
   -> See Section 7. Always goes through the developer.
+
+
+================================================================
+SECTION 9 — SHARING FEEDBACK WITH CANDIDATES
+================================================================
+
+After reviewing results, you can send individual candidates (or a
+group) a personalized feedback link showing exactly what they got
+wrong and why.
+
+HOW TO CREATE A FEEDBACK LINK:
+
+1. Go to the results viewer:
+   https://iv-ai.github.io/ponto-tagger-test/results.html
+
+2. Load results (paste the Apps Script URL from Section 1 if prompted)
+
+3. In the Candidate Scores section, tick the checkbox on each
+   candidate card you want to include (e.g. candidates 1, 2, and 5)
+
+4. Click "Create Feedback Link" — a panel opens showing only the
+   items where at least one selected candidate got the answer wrong
+
+5. For each wrong item you'll see:
+   - The input and output images (click to enlarge)
+   - The correct answer
+   - What each candidate tagged instead
+   - A note field pre-filled from the answer key comment (if set)
+   Edit the notes to add your own explanation for each item.
+
+6. Click "Generate Link" — a URL appears at the bottom
+
+7. Copy the link and send it to the candidate(s)
+   (email, Slack, etc.)
+
+WHAT THE CANDIDATE SEES:
+
+The link opens a clean read-only page showing:
+  - Who the feedback is for
+  - Each wrong item with thumbnails, the correct answer, their answer
+  - Your reviewer note highlighted in a box
+
+No login required. Anyone with the link can open it.
+
+NOTES:
+  - You can include multiple candidates in one link
+  - The link encodes everything — nothing is stored on a server
+  - Links do not expire
+  - If you edit notes and click Generate again, you get a new link
 ```
