@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ponto Tagger Test — Feedback</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    body { font-family: 'Inter', system-ui, sans-serif; background: #f8fafc; }
+    .tag-badge { display: inline-flex; align-items: center; padding: 0.2rem 0.6rem; border-radius: 9999px; font-size: 0.72rem; font-weight: 600; white-space: nowrap; }
+    .tag-ready      { background: #dcfce7; color: #15803d; }
+    .tag-design     { background: #f3e8ff; color: #7e22ce; }
+    .tag-regenerate { background: #fef9c3; color: #a16207; }
+    .tag-newinput   { background: #dbeafe; color: #1d4ed8; }
+    .tag-flagged    { background: #fee2e2; color: #b91c1c; }
+    .tag-empty      { background: #f1f5f9; color: #94a3b8; }
+    .item-img { width: 80px; height: 60px; object-fit: cover; border-radius: 5px; border: 1px solid #e2e8f0; cursor: pointer; flex-shrink: 0; }
+    .item-img:hover { opacity: 0.85; }
+    .lightbox { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 100; align-items: center; justify-content: center; flex-direction: column; gap: 1rem; }
+    .lightbox.open { display: flex; }
+    .lightbox img { max-width: 90vw; max-height: 85vh; border-radius: 0.5rem; object-fit: contain; }
+  </style>
+</head>
+<body>
+
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <img id="lightbox-img" src="" alt="" />
+  <p class="text-white text-xs opacity-60">Click anywhere to close</p>
+</div>
+
+<div id="error-screen" class="hidden max-w-lg mx-auto px-6 py-24 text-center">
+  <p class="text-gray-400 text-sm">No feedback data found in this link. Make sure you copied the full URL.</p>
+</div>
+
+<div id="main" class="hidden max-w-3xl mx-auto px-6 py-10 space-y-6">
+
+  <!-- Header -->
+  <div class="space-y-1">
+    <p class="text-xs text-gray-400 uppercase tracking-wide font-semibold">Ponto QA Tagger Test</p>
+    <h1 class="text-2xl font-bold text-gray-900">Feedback</h1>
+    <p class="text-sm text-gray-500" id="meta-candidates"></p>
+    <p class="text-xs text-gray-400" id="meta-date"></p>
+  </div>
+
+  <!-- Intro note -->
+  <div class="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-sm text-blue-800">
+    Below are the items where your answers differed from the correct answer key.
+    Review each one carefully — the correct tag and any notes from the reviewer are shown.
+  </div>
+
+  <!-- Items -->
+  <div id="items-list" class="space-y-4"></div>
+
+  <p class="text-xs text-gray-300 text-center pt-4" id="footer-date"></p>
+</div>
+
+<script>
+function tagClass(tag) {
+  const map = { ready: 'ready', design: 'design', regenerate: 'regenerate', newinput: 'newinput', flagged: 'flagged' };
+  return map[tag] || 'empty';
+}
+function tagLabel(tag) {
+  const map = { ready: 'Ready', design: 'Design Review', regenerate: 'Regenerate', newinput: 'New Input', flagged: 'Flag' };
+  return map[tag] || (tag || '—');
+}
+
+function openLightbox(url) {
+  document.getElementById('lightbox-img').src = url;
+  document.getElementById('lightbox').classList.add('open');
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('open');
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
+
+// ─── DECODE & RENDER ────────────────────────────────────────────────────────
+try {
+  const hash = location.hash.slice(1);
+  if (!hash) throw new Error('empty');
+  const payload = JSON.parse(decodeURIComponent(escape(atob(hash))));
+
+  document.getElementById('main').classList.remove('hidden');
+
+  // Header
+  const names = payload.candidates.map(c => c.name).join(', ');
+  document.getElementById('meta-candidates').textContent = `For: ${names}`;
+  if (payload.generated_at) {
+    const d = new Date(payload.generated_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+    document.getElementById('meta-date').textContent = `Generated ${d}`;
+    document.getElementById('footer-date').textContent = `Generated ${d}`;
+  }
+  document.title = `Feedback — ${names}`;
+
+  // Items
+  const container = document.getElementById('items-list');
+  payload.items.forEach((item, idx) => {
+    const card = document.createElement('div');
+    card.className = 'bg-white rounded-xl border border-gray-200 overflow-hidden';
+    card.innerHTML = `
+      <div class="px-5 py-4 border-b border-gray-50 flex items-center gap-3">
+        <span class="text-xs text-gray-300 font-mono w-5 text-right flex-shrink-0">${idx + 1}</span>
+        <div>
+          <p class="font-semibold text-gray-900 text-sm">${item.place_name || item.place_id}</p>
+          <p class="text-xs text-gray-400">${item.address || ''}</p>
+        </div>
+      </div>
+      <div class="px-5 py-4 flex gap-4 flex-wrap">
+        <!-- Images -->
+        <div class="flex gap-2 flex-shrink-0">
+          ${item.input_url  ? `<div class="space-y-1 text-center"><p class="text-xs text-gray-400">Input</p><img class="item-img" src="${item.input_url}"  onclick="openLightbox('${item.input_url}')"  /></div>` : ''}
+          ${item.output_url ? `<div class="space-y-1 text-center"><p class="text-xs text-gray-400">Output</p><img class="item-img" src="${item.output_url}" onclick="openLightbox('${item.output_url}')" /></div>` : ''}
+        </div>
+        <!-- Tags -->
+        <div class="flex-1 min-w-0 space-y-3">
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="text-xs font-semibold text-gray-500">Correct answer:</span>
+            <span class="tag-badge tag-${tagClass(item.correct)}">${tagLabel(item.correct)}</span>
+          </div>
+          <div class="space-y-1">
+            ${item.candidates.map(c => {
+              if (!c.tag) return '';
+              const wrong = c.tag !== item.correct;
+              return `<div class="flex items-center gap-2 flex-wrap">
+                <span class="text-xs text-gray-500 w-28 truncate">${c.name}:</span>
+                <span class="tag-badge tag-${tagClass(c.tag)}" style="${wrong ? 'opacity:0.75;' : ''}">${tagLabel(c.tag)}</span>
+                <span class="text-xs ${wrong ? 'text-red-400' : 'text-green-500'}">${wrong ? '✗ wrong' : '✓ correct'}</span>
+                ${c.comment ? `<span class="text-xs text-gray-400 italic">"${c.comment}"</span>` : ''}
+              </div>`;
+            }).join('')}
+          </div>
+          ${item.note ? `<div class="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5 mt-2">
+            <p class="text-xs font-semibold text-amber-700 mb-1">Reviewer note</p>
+            <p class="text-sm text-amber-900 whitespace-pre-wrap">${item.note}</p>
+          </div>` : ''}
+        </div>
+      </div>`;
+    container.appendChild(card);
+  });
+
+} catch(e) {
+  document.getElementById('error-screen').classList.remove('hidden');
+}
+</script>
+</body>
+</html>
