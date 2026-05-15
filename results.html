@@ -809,6 +809,7 @@ async function generateFeedbackLink() {
   const linkRow = document.getElementById('feedback-link-row');
   linkOut.value = `${base}#${encoded}`;
   linkRow.classList.remove('hidden');
+  shortenLink();
 }
 
 function copyFeedbackLink() {
@@ -832,7 +833,8 @@ async function shortenLink() {
     const data = await resp.json();
     if (data.shorturl) {
       input.value = data.shorturl;
-      btn.textContent = 'Done';
+      navigator.clipboard.writeText(data.shorturl);
+      btn.textContent = 'Copied!';
     } else {
       btn.textContent = 'Failed';
     }
