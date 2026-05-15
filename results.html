@@ -243,6 +243,22 @@ let masterKey = null;
 let allSubmissions = [];   // candidates only
 let allTaggers = [];       // working taggers
 
+// Manual overrides: { [tester_name+submitted_at]: 'candidate'|'tagger' }
+const OVERRIDE_KEY = 'ponto_type_overrides';
+function getOverrides() { try { return JSON.parse(localStorage.getItem(OVERRIDE_KEY) || '{}'); } catch { return {}; } }
+function setOverride(sub, type) {
+  const overrides = getOverrides();
+  overrides[sub.tester_name + '|' + sub.submitted_at] = type;
+  localStorage.setItem(OVERRIDE_KEY, JSON.stringify(overrides));
+}
+function applyOverrides(subs) {
+  const overrides = getOverrides();
+  subs.forEach(s => {
+    const key = s.tester_name + '|' + s.submitted_at;
+    if (overrides[key]) s.tester_type = overrides[key];
+  });
+}
+
 if (SCRIPT_URL) {
   document.getElementById('script-url-input').value = SCRIPT_URL;
   loadData();
@@ -268,6 +284,7 @@ async function loadData() {
     const data = await resp.json();
     masterKey = data.master || null;
     const subs = (data.submissions || []).filter(s => s.tester_name !== 'poiMaster');
+    applyOverrides(subs);
     allSubmissions = subs.filter(s => s.tester_type !== 'tagger');
     allTaggers     = subs.filter(s => s.tester_type === 'tagger');
     render();
@@ -483,9 +500,36 @@ function renderCandidateCards() {
         <div class="bg-blue-50 rounded p-1.5"><p class="text-gray-400">New Input</p><p class="font-semibold text-blue-600">${counts.newinput}</p></div>
         <div class="bg-red-50 rounded p-1.5"><p class="text-gray-400">Flag</p><p class="font-semibold text-red-600">${counts.flagged}</p></div>
       </div>
-      ${wrongCount !== null ? `<p class="text-xs text-gray-400 text-center">Click to see ${wrongCount} wrong answer${wrongCount !== 1 ? 's' : ''} →</p>` : '<p class="text-xs text-gray-400 text-center">Click to view details →</p>'}`;
+      ${wrongCount !== null ? `<p class="text-xs text-gray-400 text-center">Click to see ${wrongCount} wrong answer${wrongCount !== 1 ? 's' : ''} →</p>` : '<p class="text-xs text-gray-400 text-center">Click to view details →</p>'}
+      <button onclick="event.stopPropagation(); moveToTagger(${JSON.stringify(sub.tester_name)}, ${JSON.stringify(sub.submitted_at)})" class="w-full text-xs text-indigo-500 hover:text-indigo-700 hover:bg-indigo-50 rounded py-1 border border-indigo-100 mt-1">Move to Working Taggers →</button>`;
     container.appendChild(card);
   });
+}
+
+function moveToTagger(name, submitted_at) {
+  const sub = allSubmissions.find(s => s.tester_name === name && s.submitted_at === submitted_at);
+  if (!sub) return;
+  setOverride(sub, 'tagger');
+  allSubmissions = allSubmissions.filter(s => !(s.tester_name === name && s.submitted_at === submitted_at));
+  sub.tester_type = 'tagger';
+  allTaggers.push(sub);
+  renderCandidateCards();
+  renderTaggerCards();
+  document.getElementById('candidate-summary').classList.toggle('hidden', allSubmissions.length === 0);
+  document.getElementById('tagger-summary').classList.remove('hidden');
+}
+
+function moveToCandidate(name, submitted_at) {
+  const sub = allTaggers.find(s => s.tester_name === name && s.submitted_at === submitted_at);
+  if (!sub) return;
+  setOverride(sub, 'candidate');
+  allTaggers = allTaggers.filter(s => !(s.tester_name === name && s.submitted_at === submitted_at));
+  sub.tester_type = 'candidate';
+  allSubmissions.push(sub);
+  renderCandidateCards();
+  renderTaggerCards();
+  document.getElementById('candidate-summary').classList.remove('hidden');
+  document.getElementById('tagger-summary').classList.toggle('hidden', allTaggers.length === 0);
 }
 
 function renderTaggerCards() {
@@ -530,7 +574,8 @@ function renderTaggerCards() {
         <div class="bg-blue-50 rounded p-1.5"><p class="text-gray-400">New Input</p><p class="font-semibold text-blue-600">${counts.newinput}</p></div>
         <div class="bg-red-50 rounded p-1.5"><p class="text-gray-400">Flag</p><p class="font-semibold text-red-600">${counts.flagged}</p></div>
       </div>
-      ${wrongCount !== null ? `<p class="text-xs text-gray-400 text-center">Click to see ${wrongCount} wrong answer${wrongCount !== 1 ? 's' : ''} →</p>` : '<p class="text-xs text-gray-400 text-center">Click to view details →</p>'}`;
+      ${wrongCount !== null ? `<p class="text-xs text-gray-400 text-center">Click to see ${wrongCount} wrong answer${wrongCount !== 1 ? 's' : ''} →</p>` : '<p class="text-xs text-gray-400 text-center">Click to view details →</p>'}
+      <button onclick="event.stopPropagation(); moveToCandidate(${JSON.stringify(sub.tester_name)}, ${JSON.stringify(sub.submitted_at)})" class="w-full text-xs text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded py-1 border border-gray-100 mt-1">← Move to Candidates</button>`;
     container.appendChild(card);
   });
 }
