@@ -829,11 +829,11 @@ async function shortenLink() {
   btn.textContent = '…';
   btn.disabled = true;
   try {
-    const resp = await fetch(`https://is.gd/create.php?format=json&url=${encodeURIComponent(long)}`);
-    const data = await resp.json();
-    if (data.shorturl) {
-      input.value = data.shorturl;
-      navigator.clipboard.writeText(data.shorturl);
+    const resp = await fetch(`https://tinyurl.com/api-create.php?url=${encodeURIComponent(long)}`);
+    const short = await resp.text();
+    if (short.startsWith('https://')) {
+      input.value = short;
+      navigator.clipboard.writeText(short);
       btn.textContent = 'Copied!';
     } else {
       btn.textContent = 'Failed';
