@@ -30,8 +30,12 @@
   <p class="text-white text-xs opacity-60">Click anywhere to close</p>
 </div>
 
+<div id="loading-screen" class="hidden max-w-lg mx-auto px-6 py-24 text-center">
+  <p class="text-gray-400 text-sm">Loading feedback…</p>
+</div>
+
 <div id="error-screen" class="hidden max-w-lg mx-auto px-6 py-24 text-center">
-  <p class="text-gray-400 text-sm">No feedback data found in this link. Make sure you copied the full URL.</p>
+  <p class="text-gray-400 text-sm">No feedback data found. Make sure you copied the full URL.</p>
 </div>
 
 <div id="main" class="hidden max-w-3xl mx-auto px-6 py-10 space-y-6">
@@ -57,6 +61,8 @@
 </div>
 
 <script>
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzLqCcIkx38nCnnqbm4ZMULzX0Q1SZSaRsMurHTAz5GuvA4Vx9RoNd2iDxar2LLDr4WkQ/exec';
+
 function tagClass(tag) {
   const map = { ready: 'ready', design: 'design', regenerate: 'regenerate', newinput: 'newinput', flagged: 'flagged' };
   return map[tag] || 'empty';
@@ -75,28 +81,86 @@ function closeLightbox() {
 }
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
 
-// ─── DECODE & RENDER ────────────────────────────────────────────────────────
-function load() {
+async function load() {
+  const params = new URLSearchParams(location.search);
+  const cParam = params.get('c');
+
+  if (cParam) {
+    // New mode: ?c=Name1,Name2 — fetch live from sheet
+    document.getElementById('loading-screen').classList.remove('hidden');
+    try {
+      const names = cParam.split(',').map(s => s.trim()).filter(Boolean);
+      const resp = await fetch(SCRIPT_URL);
+      const data = await resp.json();
+      const payload = buildPayload(names, data.submissions || [], data.master || {});
+      document.getElementById('loading-screen').classList.add('hidden');
+      render(payload);
+    } catch(e) {
+      document.getElementById('loading-screen').classList.add('hidden');
+      document.getElementById('error-screen').classList.remove('hidden');
+    }
+    return;
+  }
+
+  // Legacy: #hash
   try {
     const hash = location.hash.slice(1);
     if (!hash) throw new Error('empty');
-
     let payload;
     try {
-      // Try compressed format first (new)
       const b64 = hash.replace(/-/g, '+').replace(/_/g, '/');
       const binary = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
       const json = fflate.strFromU8(fflate.inflateSync(binary));
       payload = JSON.parse(json);
     } catch {
-      // Fall back to plain base64 (old links)
       payload = JSON.parse(decodeURIComponent(escape(atob(hash))));
     }
-
     render(payload);
   } catch(e) {
     document.getElementById('error-screen').classList.remove('hidden');
   }
+}
+
+function buildPayload(names, submissions, master) {
+  const subs = submissions.filter(s => names.includes(s.tester_name));
+  const template = subs[0]?.items || [];
+
+  const wrongItems = template
+    .filter(item => {
+      const m = master[item.place_id];
+      if (!m?.tag) return false;
+      return subs.some(s => {
+        const a = s.items.find(i => i.place_id === item.place_id);
+        return a?.tag !== m.tag;
+      });
+    })
+    .map(item => {
+      const m = master[item.place_id];
+      return {
+        place_id:   item.place_id,
+        place_name: item.place_name,
+        address:    item.address,
+        input_url:  item.input_url,
+        output_url: item.output_url,
+        correct:    m.tag,
+        note:       m.comment || '',
+        candidates: subs.map(s => {
+          const a = s.items.find(i => i.place_id === item.place_id);
+          return { name: s.tester_name, tag: a?.tag || '', comment: a?.comment || '' };
+        }),
+      };
+    });
+
+  const candidates = subs.map(s => {
+    const correct = template.filter(item => {
+      const m = master[item.place_id];
+      const a = s.items.find(i => i.place_id === item.place_id);
+      return m?.tag && a?.tag === m.tag;
+    }).length;
+    return { name: s.tester_name, email: s.tester_email || '', correct, total: template.length };
+  });
+
+  return { candidates, items: wrongItems };
 }
 
 function render(payload) {
