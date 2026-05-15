@@ -501,8 +501,12 @@ function renderCandidateCards() {
         <div class="bg-red-50 rounded p-1.5"><p class="text-gray-400">Flag</p><p class="font-semibold text-red-600">${counts.flagged}</p></div>
       </div>
       ${wrongCount !== null ? `<p class="text-xs text-gray-400 text-center">Click to see ${wrongCount} wrong answer${wrongCount !== 1 ? 's' : ''} →</p>` : '<p class="text-xs text-gray-400 text-center">Click to view details →</p>'}
-      <button onclick="event.stopPropagation(); moveToTagger(${JSON.stringify(sub.tester_name)}, ${JSON.stringify(sub.submitted_at)})" class="w-full text-xs text-indigo-500 hover:text-indigo-700 hover:bg-indigo-50 rounded py-1 border border-indigo-100 mt-1">Move to Working Taggers →</button>`;
+      <button class="move-btn w-full text-xs text-indigo-500 hover:text-indigo-700 hover:bg-indigo-50 rounded py-1 border border-indigo-100 mt-1">Move to Working Taggers →</button>`;
     container.appendChild(card);
+    card.querySelector('.move-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      moveToTagger(sub.tester_name, sub.submitted_at);
+    });
   });
 }
 
@@ -575,8 +579,12 @@ function renderTaggerCards() {
         <div class="bg-red-50 rounded p-1.5"><p class="text-gray-400">Flag</p><p class="font-semibold text-red-600">${counts.flagged}</p></div>
       </div>
       ${wrongCount !== null ? `<p class="text-xs text-gray-400 text-center">Click to see ${wrongCount} wrong answer${wrongCount !== 1 ? 's' : ''} →</p>` : '<p class="text-xs text-gray-400 text-center">Click to view details →</p>'}
-      <button onclick="event.stopPropagation(); moveToCandidate(${JSON.stringify(sub.tester_name)}, ${JSON.stringify(sub.submitted_at)})" class="w-full text-xs text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded py-1 border border-gray-100 mt-1">← Move to Candidates</button>`;
+      <button class="move-btn w-full text-xs text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded py-1 border border-gray-100 mt-1">← Move to Candidates</button>`;
     container.appendChild(card);
+    card.querySelector('.move-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      moveToCandidate(sub.tester_name, sub.submitted_at);
+    });
   });
 }
 
