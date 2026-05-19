@@ -345,14 +345,28 @@ function renderMasterStatus() {
   }
 }
 
+const ITEM_WEIGHTS = {
+  'a0a8ecc9-5989-b30c-0cc8-7c42de99bbe2': 3, // Kindeva Drug
+  '663d9437-887b-36b5-968f-ed977896d1b1': 3, // ServiceNow
+  '3f2ef186-aabd-7361-ade4-61d8795e6bfa': 3, // M2 Nail Lounge
+  '72375624-07ff-0662-a3c2-4586f0ccd856': 3, // PTJ Nails and Spa
+  'd1ff4d44-dc43-58ee-947f-3e8c4bde3746': 3, // The Pasta Market — Regenerate or Design both acceptable
+};
+
+const MULTI_CORRECT = {
+  'd1ff4d44-dc43-58ee-947f-3e8c4bde3746': ['regenerate', 'design'], // The Pasta Market
+};
+
 function score(submission) {
   if (!masterKey) return null;
   let correct = 0, total = 0;
   submission.items.forEach(item => {
     const ans = masterKey[item.place_id];
     if (!ans) return;
-    total++;
-    if (item.tag === ans.tag) correct++;
+    const w = ITEM_WEIGHTS[item.place_id] || 1;
+    total += w;
+    const ok = MULTI_CORRECT[item.place_id] ? MULTI_CORRECT[item.place_id].includes(item.tag) : item.tag === ans.tag;
+    if (ok) correct += w;
   });
   return total ? { correct, total, pct: Math.round((correct / total) * 100) } : null;
 }

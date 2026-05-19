@@ -423,6 +423,20 @@
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzLqCcIkx38nCnnqbm4ZMULzX0Q1SZSaRsMurHTAz5GuvA4Vx9RoNd2iDxar2LLDr4WkQ/exec';
 const TESTER_TYPE = (new URLSearchParams(location.search).get('type') === 'tagger') ? 'tagger' : 'candidate';
 
+// Weighted items: these count 3x in scoring
+const ITEM_WEIGHTS = {
+  'a0a8ecc9-5989-b30c-0cc8-7c42de99bbe2': 3, // Kindeva Drug — must catch Flag
+  '663d9437-887b-36b5-968f-ed977896d1b1': 3, // ServiceNow — must catch Flag
+  '3f2ef186-aabd-7361-ade4-61d8795e6bfa': 3, // M2 Nail Lounge — must catch Needs New Input
+  '72375624-07ff-0662-a3c2-4586f0ccd856': 3, // PTJ Nails and Spa — must catch Needs New Input
+  'd1ff4d44-dc43-58ee-947f-3e8c4bde3746': 3, // The Pasta Market — Regenerate or Design both acceptable
+};
+
+// Items where multiple tags are acceptable (all count as correct)
+const MULTI_CORRECT = {
+  'd1ff4d44-dc43-58ee-947f-3e8c4bde3746': ['regenerate', 'design'], // The Pasta Market
+};
+
 // ─── SAMPLE DATA (30 items — replace inputLink/outputLink with real URLs) ──
 const ITEMS = [
   { id: "c3602554-b018-346d-f440-fc5b680bcf5d", name: "Taqueria La Mordida", address: "535 Oceana Blvd, Pacifica, CA", inputLink: "images/input_c3602554-b018-346d-f440-fc5b680bcf5d.jpg", outputLink: "images/output_c3602554-b018-346d-f440-fc5b680bcf5d_1778689438.jpg" },
@@ -827,7 +841,8 @@ async function showCandidateScore(payload) {
     let correct = 0, total = 0;
     payload.items.forEach(item => {
       const m = masterKey[item.place_id];
-      if (m?.tag && item.tag) { total++; if (item.tag === m.tag) correct++; }
+      const w = ITEM_WEIGHTS[item.place_id] || 1;
+      if (m?.tag && item.tag) { total += w; const ok = MULTI_CORRECT[item.place_id] ? MULTI_CORRECT[item.place_id].includes(item.tag) : item.tag === m.tag; if (ok) correct += w; }
     });
     if (total === 0) return;
     const pct = Math.round(correct / total * 100);
@@ -863,9 +878,10 @@ async function showTaggerResults(payload) {
   payload.items.forEach((item, idx) => {
     const masterAns = masterKey?.[item.place_id];
     const myTag = item.tag;
-    const isCorrect = masterAns && myTag && myTag === masterAns.tag;
+    const isCorrect = masterAns && myTag && (MULTI_CORRECT[item.place_id] ? MULTI_CORRECT[item.place_id].includes(myTag) : myTag === masterAns.tag);
     const isWrong   = masterAns && myTag && myTag !== masterAns.tag;
-    if (masterAns && myTag) { total++; if (isCorrect) correct++; }
+    const w = ITEM_WEIGHTS[item.place_id] || 1;
+    if (masterAns && myTag) { total += w; if (isCorrect) correct += w; }
 
     const div = document.createElement('div');
     div.className = 'card p-4 ' + (isWrong ? 'border-red-200 bg-red-50/30' : isCorrect ? 'border-green-200' : '');
