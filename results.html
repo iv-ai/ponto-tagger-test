@@ -51,6 +51,8 @@
     .detail-row:last-child { border-bottom: none; }
     .detail-row.wrong { background: #fff8f8; }
     .detail-row.correct { background: #f8fff9; }
+    .detail-row.critical { border-left: 3px solid #f97316; }
+    .critical-badge { display: inline-flex; align-items: center; gap: 0.2rem; font-size: 0.65rem; font-weight: 700; color: #ea580c; background: #fff7ed; border: 1px solid #fed7aa; border-radius: 9999px; padding: 0.1rem 0.45rem; white-space: nowrap; }
     .detail-img { width: 64px; height: 48px; object-fit: cover; border-radius: 4px; border: 1px solid #e2e8f0; cursor: pointer; flex-shrink: 0; }
     .candidate-card { cursor: pointer; transition: box-shadow 0.15s, border-color 0.15s; }
     .candidate-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); border-color: #93c5fd; }
@@ -417,12 +419,13 @@ function renderTable() {
 
   template.forEach((item, idx) => {
     const tr = document.createElement('tr');
-    tr.className = idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50';
+    const isCritical = !!ITEM_WEIGHTS[item.place_id];
+    tr.className = (idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50') + (isCritical ? ' border-l-2 border-orange-400' : '');
 
     // Item name
     const tdItem = document.createElement('td');
     tdItem.className = 'px-4 py-3 border-r align-top';
-    tdItem.innerHTML = `<p class="font-medium text-gray-800 text-xs leading-tight">${item.place_name || item.place_id}</p>
+    tdItem.innerHTML = `<div class="flex items-center gap-1.5 flex-wrap">${isCritical ? '<span class="critical-badge">⚠ Critical</span>' : ''}<p class="font-medium text-gray-800 text-xs leading-tight">${item.place_name || item.place_id}</p></div>
       <p class="text-gray-400 text-xs mt-0.5 leading-tight">${item.address || ''}</p>`;
 
     // Images
@@ -925,14 +928,15 @@ function renderDrawerRows() {
 
     if (wrongOnly && !wrong) return;
 
+    const isCritical = !!ITEM_WEIGHTS[item.place_id];
     const row = document.createElement('div');
-    row.className = 'detail-row ' + (correct ? 'correct' : wrong ? 'wrong' : '');
+    row.className = 'detail-row ' + (correct ? 'correct' : wrong ? 'wrong' : '') + (isCritical ? ' critical' : '');
     row.innerHTML = `
       <span class="text-xs text-gray-300 w-5 flex-shrink-0 text-right font-mono">${idx + 1}</span>
       ${item.input_url ? `<img class="detail-img" src="${item.input_url}" title="Input" onclick="openLightbox('${item.input_url}')" />` : '<div class="detail-img bg-gray-100 rounded"></div>'}
       ${item.output_url ? `<img class="detail-img" src="${item.output_url}" title="Output" onclick="openLightbox('${item.output_url}')" />` : '<div class="detail-img bg-gray-100 rounded"></div>'}
       <div class="flex-1 min-w-0">
-        <p class="text-xs font-medium text-gray-800 truncate">${item.place_name || item.place_id}</p>
+        <div class="flex items-center gap-1.5 flex-wrap">${isCritical ? '<span class="critical-badge">⚠ Critical</span>' : ''}<p class="text-xs font-medium text-gray-800 truncate">${item.place_name || item.place_id}</p></div>
         <p class="text-xs text-gray-400 truncate">${item.address || ''}</p>
         ${item.comment ? `<p class="text-xs text-gray-500 italic mt-0.5 truncate">"${item.comment}"</p>` : ''}
       </div>
