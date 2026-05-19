@@ -729,10 +729,11 @@ function updateFeedbackSelection() {
 }
 
 function getSelectedSubs() {
-  const sorted = [...allSubmissions].sort((a, b) => {
-    const sa = score(a), sb = score(b);
-    return (sb?.pct ?? -1) - (sa?.pct ?? -1);
-  });
+  const sorted = [...allSubmissions].sort((a, b) =>
+    candidateSort === 'score'
+      ? ((score(b)?.pct ?? -1) - (score(a)?.pct ?? -1))
+      : (new Date(b.submitted_at || 0) - new Date(a.submitted_at || 0))
+  );
   const checked = [...document.querySelectorAll('.candidate-checkbox:checked')];
   const idxs = new Set(checked.map(c => parseInt(c.dataset.idx)));
   return sorted.filter((_, i) => idxs.has(i));
@@ -741,6 +742,9 @@ function getSelectedSubs() {
 function openFeedbackModal() {
   const subs = getSelectedSubs();
   if (!subs.length) return;
+
+  lastFeedbackNames  = subs.map(s => s.tester_name);
+  lastFeedbackEmails = subs.map(s => s.tester_email).filter(Boolean);
 
   document.getElementById('feedback-modal-meta').textContent =
     `Candidates: ${subs.map(s => s.tester_name).join(', ')}`;
