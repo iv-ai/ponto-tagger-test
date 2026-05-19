@@ -200,7 +200,7 @@
     <div class="flex items-center justify-between flex-wrap gap-3">
       <div>
         <h2 class="text-base font-semibold text-gray-800">Candidates</h2>
-        <p class="text-xs text-gray-400">New applicants scored against the answer key</p>
+        <p class="text-xs text-gray-400" id="candidates-subtitle">New applicants scored against the answer key</p>
       </div>
       <div class="flex items-center gap-3">
         <div class="flex items-center gap-1 text-xs text-gray-400">
@@ -296,6 +296,7 @@ async function loadData() {
     applyOverrides(subs);
     allSubmissions = subs.filter(s => s.tester_type !== 'tagger');
     allTaggers     = subs.filter(s => s.tester_type === 'tagger');
+    tagDuplicates(allSubmissions);
     render();
   } catch (e) {
     showLoading(false);
@@ -477,6 +478,13 @@ function renderCandidateCards() {
   const container = document.getElementById('candidate-cards');
   container.innerHTML = '';
 
+  const dupCount = allSubmissions.filter(s => s._totalAttempts).length;
+  const uniqueDupEmails = new Set(allSubmissions.filter(s => s._totalAttempts).map(s => s.tester_email)).size;
+  const subtitle = document.getElementById('candidates-subtitle');
+  if (subtitle) subtitle.textContent = dupCount
+    ? `New applicants scored against the answer key · ${uniqueDupEmails} person${uniqueDupEmails > 1 ? 's' : ''} submitted multiple times`
+    : 'New applicants scored against the answer key';
+
   const sorted = [...allSubmissions].sort((a, b) =>
     candidateSort === 'score'
       ? ((score(b)?.pct ?? -1) - (score(a)?.pct ?? -1))
@@ -509,6 +517,7 @@ function renderCandidateCards() {
             <div class="flex items-center gap-2 flex-wrap">
               <span class="text-xs font-bold text-gray-400">#${rank + 1}</span>
               <p class="font-semibold text-gray-900">${sub.tester_name}</p>
+              ${sub._totalAttempts ? `<span class="text-xs font-semibold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded-full">Attempt ${sub._attempt}/${sub._totalAttempts}</span>` : ''}
               ${sentPass ? `<span class="text-xs font-semibold text-green-700 bg-green-100 px-1.5 py-0.5 rounded-full">✓ Pass sent</span>` : ''}
               ${sentFail ? `<span class="text-xs font-semibold text-red-600 bg-red-100 px-1.5 py-0.5 rounded-full">✗ Fail sent</span>` : ''}
             </div>
@@ -672,6 +681,25 @@ let lastFeedbackNames = [];   // names of last feedback recipients
 
 const FEEDBACK_SENT_KEY = 'ponto_feedback_sent';
 function getFeedbackSent() { try { return JSON.parse(localStorage.getItem(FEEDBACK_SENT_KEY) || '{}'); } catch { return {}; } }
+function tagDuplicates(subs) {
+  // Group by email (non-empty), sorted by date ascending so attempt # is chronological
+  const byEmail = {};
+  subs.forEach(s => {
+    const key = (s.tester_email || '').trim().toLowerCase();
+    if (!key) return;
+    if (!byEmail[key]) byEmail[key] = [];
+    byEmail[key].push(s);
+  });
+  Object.values(byEmail).forEach(group => {
+    if (group.length < 2) return;
+    group.sort((a, b) => new Date(a.submitted_at || 0) - new Date(b.submitted_at || 0));
+    group.forEach((s, i) => {
+      s._attempt      = i + 1;
+      s._totalAttempts = group.length;
+    });
+  });
+}
+
 function setCandidateSort(type) {
   candidateSort = type;
   document.getElementById('sort-date-btn').className  = `px-2 py-0.5 rounded font-medium ${type === 'date'  ? 'bg-gray-800 text-white' : 'text-gray-500 hover:bg-gray-100'}`;
