@@ -633,6 +633,7 @@ function exportCSV() {
 
 // ─── FEEDBACK ────────────────────────────────────────────────────────────────
 let feedbackNotes = {};  // place_id -> note string
+let lastFeedbackEmails = [];  // emails of last feedback recipients
 
 function updateFeedbackSelection() {
   const checked = document.querySelectorAll('.candidate-checkbox:checked');
@@ -799,6 +800,7 @@ async function generateFeedbackLink() {
   };
 
   const names = subs.map(s => s.tester_name).join(',');
+  lastFeedbackEmails = subs.map(s => s.tester_email).filter(Boolean);
   const base = location.origin + location.pathname.replace('results.html', 'feedback.html');
   const linkOut = document.getElementById('feedback-link-output');
   const linkRow = document.getElementById('feedback-link-row');
@@ -852,7 +854,8 @@ Let us know if you have any questions. You can also ask questions in the chatroo
 
 Thanks again, and excited to work with you!`;
 
-  window.location.href = `mailto:?cc=tae%40iv.ai&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  const to = lastFeedbackEmails.join(',');
+  window.location.href = `mailto:${encodeURIComponent(to)}?cc=tae%40iv.ai&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 }
 
 // ─── CANDIDATE DRAWER ────────────────────────────────────────────────────────
