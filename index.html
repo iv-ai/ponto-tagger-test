@@ -163,14 +163,12 @@
               <input type="text" id="tester-name-input" placeholder="e.g. Jane Smith" oninput="updateSteps()" />
               <p id="name-error" class="text-xs text-red-500 hidden">Please enter your name.</p>
             </div>
-            <!-- EMAIL FIELD TEMPORARILY DISABLED
             <div class="space-y-1">
               <label class="block text-sm font-medium text-gray-700">Your Gmail address <span class="text-red-500">*</span></label>
               <p class="text-xs text-gray-500">The Gmail you'll use to access the tagger tool if selected.</p>
               <input type="email" id="tester-email-input" placeholder="e.g. jane.smith@gmail.com" oninput="checkConfirmPhrase()" />
               <p id="email-error" class="text-xs text-red-500 hidden">Please enter a valid Gmail address.</p>
             </div>
-            -->
             <div class="space-y-1">
               <label class="block text-sm font-medium text-gray-700">Confirmation <span class="text-red-500">*</span></label>
               <p class="text-xs text-gray-500">Type exactly: <span class="font-mono font-semibold text-gray-700">I have fully read the guidelines</span></p>
@@ -535,12 +533,13 @@ function updateSteps() {
 
 function checkConfirmPhrase() {
   const name  = document.getElementById('tester-name-input').value.trim();
+  const email = document.getElementById('tester-email-input').value.trim();
   const confirmation = document.getElementById('confirm-read-input').value;
   const isMaster = name === 'poiMaster';
   const step3Unlocked = tutorialDone || isMaster;
-  // const emailOk = isMaster || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email); // EMAIL DISABLED
+  const emailOk = isMaster || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   const confirmOk = isMaster || confirmation === CONFIRM_PHRASE;
-  const ready = step3Unlocked && name.length > 0 && confirmOk;
+  const ready = step3Unlocked && name.length > 0 && emailOk && confirmOk;
   const btn = document.getElementById('start-btn');
   btn.disabled = !ready;
   btn.style.opacity = ready ? '1' : '0.4';
@@ -574,8 +573,7 @@ function showScreen(name) {
 
 function startTest() {
   const nameInput  = document.getElementById('tester-name-input').value.trim();
-  // const emailInput = document.getElementById('tester-email-input').value.trim(); // EMAIL DISABLED
-  const emailInput = '';
+  const emailInput = document.getElementById('tester-email-input').value.trim();
   let valid = true;
 
   if (!nameInput) {
@@ -585,13 +583,12 @@ function startTest() {
     document.getElementById('name-error').classList.add('hidden');
   }
 
-  // EMAIL VALIDATION DISABLED
-  // if (nameInput !== 'poiMaster' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailInput)) {
-  //   document.getElementById('email-error').classList.remove('hidden');
-  //   valid = false;
-  // } else {
-  //   document.getElementById('email-error').classList.add('hidden');
-  // }
+  if (nameInput !== 'poiMaster' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailInput)) {
+    document.getElementById('email-error').classList.remove('hidden');
+    valid = false;
+  } else {
+    document.getElementById('email-error').classList.add('hidden');
+  }
 
   const isMasterCheck = nameInput === 'poiMaster';
   const confirmVal = document.getElementById('confirm-read-input').value;
