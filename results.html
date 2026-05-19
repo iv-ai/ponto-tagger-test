@@ -203,6 +203,11 @@
         <p class="text-xs text-gray-400">New applicants scored against the answer key</p>
       </div>
       <div class="flex items-center gap-3">
+        <div class="flex items-center gap-1 text-xs text-gray-400">
+          <span>Sort:</span>
+          <button id="sort-date-btn" onclick="setCandidateSort('date')" class="px-2 py-0.5 rounded font-medium bg-gray-800 text-white">Date</button>
+          <button id="sort-score-btn" onclick="setCandidateSort('score')" class="px-2 py-0.5 rounded font-medium text-gray-500 hover:bg-gray-100">Score</button>
+        </div>
         <span id="selection-count" class="text-xs text-gray-400 hidden"></span>
         <button id="feedback-btn" class="btn btn-primary hidden" onclick="openFeedbackModal()">
           Create Feedback Link
@@ -472,9 +477,10 @@ function renderCandidateCards() {
   const container = document.getElementById('candidate-cards');
   container.innerHTML = '';
 
-  // Sort by date descending (newest first)
   const sorted = [...allSubmissions].sort((a, b) =>
-    new Date(b.submitted_at || 0) - new Date(a.submitted_at || 0)
+    candidateSort === 'score'
+      ? ((score(b)?.pct ?? -1) - (score(a)?.pct ?? -1))
+      : (new Date(b.submitted_at || 0) - new Date(a.submitted_at || 0))
   );
 
   sorted.forEach((sub, rank) => {
@@ -659,12 +665,20 @@ function exportCSV() {
 }
 
 // ─── FEEDBACK ────────────────────────────────────────────────────────────────
+let candidateSort = 'date';  // 'date' | 'score'
 let feedbackNotes = {};  // place_id -> note string
 let lastFeedbackEmails = [];  // emails of last feedback recipients
 let lastFeedbackNames = [];   // names of last feedback recipients
 
 const FEEDBACK_SENT_KEY = 'ponto_feedback_sent';
 function getFeedbackSent() { try { return JSON.parse(localStorage.getItem(FEEDBACK_SENT_KEY) || '{}'); } catch { return {}; } }
+function setCandidateSort(type) {
+  candidateSort = type;
+  document.getElementById('sort-date-btn').className  = `px-2 py-0.5 rounded font-medium ${type === 'date'  ? 'bg-gray-800 text-white' : 'text-gray-500 hover:bg-gray-100'}`;
+  document.getElementById('sort-score-btn').className = `px-2 py-0.5 rounded font-medium ${type === 'score' ? 'bg-gray-800 text-white' : 'text-gray-500 hover:bg-gray-100'}`;
+  renderCandidateCards();
+}
+
 function markFeedbackSent(names, type) {
   const sent = getFeedbackSent();
   names.forEach(n => { sent[n] = { type, at: new Date().toISOString() }; });
