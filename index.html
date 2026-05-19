@@ -374,11 +374,20 @@
 
 <!-- SCREEN: Done -->
 <div id="screen-done" class="screen">
-  <div class="max-w-md mx-auto px-6 py-24 text-center space-y-4">
+  <div class="max-w-md mx-auto px-6 py-16 text-center space-y-6">
     <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
       <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="hsl(142,71%,40%)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
     </div>
     <h2 class="text-2xl font-bold text-gray-900">Test Submitted!</h2>
+    <!-- Score card (hidden until score loads) -->
+    <div id="candidate-score-card" class="hidden card p-6 space-y-1">
+      <p class="text-xs text-gray-400 uppercase tracking-wide font-semibold mb-2">Your Score</p>
+      <p class="text-5xl font-bold" id="candidate-score-pct">—</p>
+      <p class="text-gray-400 text-sm" id="candidate-score-fraction"></p>
+      <div class="w-full bg-gray-100 rounded-full h-2 mt-3 max-w-xs mx-auto">
+        <div class="h-2 rounded-full bg-blue-500" id="candidate-score-bar" style="width:0%"></div>
+      </div>
+    </div>
     <p class="text-gray-500">Thank you for completing the Ponto Tagger Test. We'll be in touch soon.</p>
   </div>
 </div>
@@ -799,12 +808,37 @@ async function submitResults() {
       await showTaggerResults(payload);
     } else {
       showScreen('done');
+      showCandidateScore(payload);
     }
   } catch (err) {
     showScreen('submit');
     showToast('Submission failed. Please try again.', 'error');
     console.error(err);
   }
+}
+
+async function showCandidateScore(payload) {
+  try {
+    const resp = await fetch(APPS_SCRIPT_URL);
+    const data = await resp.json();
+    const masterKey = data.master || null;
+    if (!masterKey) return;
+    let correct = 0, total = 0;
+    payload.items.forEach(item => {
+      const m = masterKey[item.place_id];
+      if (m?.tag && item.tag) { total++; if (item.tag === m.tag) correct++; }
+    });
+    if (total === 0) return;
+    const pct = Math.round(correct / total * 100);
+    const color = pct >= 80 ? '#15803d' : pct >= 60 ? '#a16207' : '#b91c1c';
+    const barColor = pct >= 80 ? 'bg-green-500' : pct >= 60 ? 'bg-yellow-400' : 'bg-red-400';
+    document.getElementById('candidate-score-pct').textContent = pct + '%';
+    document.getElementById('candidate-score-pct').style.color = color;
+    document.getElementById('candidate-score-fraction').textContent = `${correct} / ${total} correct`;
+    document.getElementById('candidate-score-bar').className = `h-2 rounded-full ${barColor}`;
+    document.getElementById('candidate-score-bar').style.width = pct + '%';
+    document.getElementById('candidate-score-card').classList.remove('hidden');
+  } catch(e) { /* silently skip if fetch fails */ }
 }
 
 async function showTaggerResults(payload) {
