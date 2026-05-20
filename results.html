@@ -184,6 +184,20 @@
     </div>
   </div>
 
+  <!-- Score distribution chart -->
+  <div id="score-dist" class="hidden bg-white rounded-lg border p-4">
+    <div class="flex items-center justify-between mb-3">
+      <div>
+        <p class="text-sm font-semibold text-gray-800">Score Distribution</p>
+        <p class="text-xs text-gray-400" id="score-dist-subtitle"></p>
+      </div>
+    </div>
+    <div id="score-dist-chart" class="relative" style="height:140px;"></div>
+    <div class="flex justify-between text-xs text-gray-300 mt-1 px-1">
+      <span>0%</span><span>10%</span><span>20%</span><span>30%</span><span>40%</span><span>50%</span><span>60%</span><span>70%</span><span>80%</span><span>90%</span><span>100%</span>
+    </div>
+  </div>
+
   <!-- Loading -->
   <div id="loading-msg" class="hidden bg-white rounded-lg border p-12 text-center space-y-2">
     <div class="spinner mx-auto"></div>
@@ -328,6 +342,7 @@ function render() {
   document.getElementById('results-table-wrapper').classList.remove('hidden');
 
   renderStats();
+  renderScoreDist();
   renderTable();
   if (allSubmissions.length) {
     document.getElementById('candidate-summary').classList.remove('hidden');
@@ -404,6 +419,59 @@ function renderStats() {
     document.getElementById('stat-avg-score').textContent = '—';
     document.getElementById('stat-top-score').textContent = '—';
   }
+}
+
+function renderScoreDist() {
+  const scores = allSubmissions.map(s => score(s)).filter(Boolean).map(s => s.pct);
+  const el = document.getElementById('score-dist');
+  if (scores.length < 2) { el.classList.add('hidden'); return; }
+  el.classList.remove('hidden');
+
+  // Bucket into 10% ranges: 0-9, 10-19, ..., 90-100
+  const buckets = Array(10).fill(0);
+  scores.forEach(pct => { buckets[Math.min(Math.floor(pct / 10), 9)]++; });
+  const max = Math.max(...buckets, 1);
+
+  const avg = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+  const med = [...scores].sort((a,b)=>a-b)[Math.floor(scores.length/2)];
+  document.getElementById('score-dist-subtitle').textContent =
+    `${scores.length} candidates · avg ${avg}% · median ${med}%`;
+
+  const W = 600, H = 120, pad = 2;
+  const bw = (W - pad * 2) / 10;
+
+  // Build bars + smooth curve points
+  const barRects = buckets.map((count, i) => {
+    const x = pad + i * bw;
+    const h = count === 0 ? 0 : Math.max(4, Math.round((count / max) * (H - 20)));
+    const y = H - h;
+    const fill = i < 5 ? '#fca5a5' : i < 7 ? '#fde68a' : '#86efac';
+    return `<rect x="${x+1}" y="${y}" width="${bw-2}" height="${h}" fill="${fill}" rx="2"/>
+            <text x="${x + bw/2}" y="${H+2}" text-anchor="middle" font-size="9" fill="#cbd5e1">${count > 0 ? count : ''}</text>`;
+  }).join('');
+
+  // Smooth curve via cubic bezier through bucket midpoints
+  const pts = buckets.map((count, i) => ({
+    x: pad + i * bw + bw / 2,
+    y: H - (count === 0 ? 0 : Math.max(4, Math.round((count / max) * (H - 20)))),
+  }));
+  let d = `M ${pts[0].x} ${pts[0].y}`;
+  for (let i = 1; i < pts.length; i++) {
+    const cx = (pts[i-1].x + pts[i].x) / 2;
+    d += ` C ${cx} ${pts[i-1].y}, ${cx} ${pts[i].y}, ${pts[i].x} ${pts[i].y}`;
+  }
+
+  // Avg line
+  const avgX = pad + (avg / 100) * (W - pad * 2);
+
+  const svg = `<svg viewBox="0 0 ${W} ${H+10}" style="width:100%;height:100%;" preserveAspectRatio="none">
+    ${barRects}
+    <path d="${d}" fill="none" stroke="#6366f1" stroke-width="2" stroke-linejoin="round"/>
+    <line x1="${avgX}" y1="0" x2="${avgX}" y2="${H}" stroke="#94a3b8" stroke-width="1" stroke-dasharray="3,3"/>
+    <text x="${avgX+3}" y="10" font-size="9" fill="#94a3b8">avg</text>
+  </svg>`;
+
+  document.getElementById('score-dist-chart').innerHTML = svg;
 }
 
 function renderTable() {
