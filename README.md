@@ -65,15 +65,41 @@ Submissions appear under **Working Taggers** in the results viewer.
 | **Needs New Input** | Input photo is unusable — food shot, person, interior, irrelevant image |
 | **Flag** | Location is a skip category (see below) |
 
-### Flag categories
+### The real test: is this place an attraction?
+
+We supply POI imagery to a client. "Flag" means **don't deliver this
+place** — not a data-quality complaint. The category list below is a
+default heuristic for "generic, not a destination," but it's not an
+absolute ban. The actual question is:
+
+> **Is this specific place an attraction/landmark someone would recognize
+> or specifically seek out — regardless of what category it nominally
+> falls into?**
+
+A casino that's just a slot-machine hall in a strip mall → Flag (gambling,
+not a destination). ARIA Resort & Casino, or any casino that's itself a
+recognizable resort/landmark → do NOT flag, even though "casino" sits
+under Adult Entertainment below. Same logic applies to cemeteries
+(Arlington National Cemetery), government buildings (Texas Capitol),
+churches (St. Patrick's Cathedral), convention centers hosting iconic
+events, etc. — all nominally in a flag category, all genuine attractions.
+
+**Two exceptions that always win, regardless of attraction status:**
+- **Chain locations** — never flag a chain for a category reason. Chains
+  are always in scope.
+- **Closed locations** — permanently or temporarily closed places are
+  always flagged, even if otherwise iconic (e.g. a famous venue that has
+  since shut down).
+
+### Flag categories (default — override if it's a genuine attraction)
 
 - **Cemetery** — memorial / burial ground
 - **City Block** — multi-storey apartment buildings, office blocks, mixed-use buildings surrounded by streets
 - **Cadastral** — land surveying / property mapping
-- **Adult Entertainment** — adult toys, strip clubs, gambling houses
+- **Adult Entertainment** — adult toys, strip clubs, gambling houses (LGBTQ+ clubs are not "adult" unless nudity/sex is actually sold on-site)
 - **Event Spaces** — commercial event venues (banquet halls, convention centers)
 - **Lottery Booth** — retail / gaming
-- **Professional Place** — education (preschool–high school), governance, military; also dance studios, martial arts academies, acting schools, sports academies, libraries
+- **Professional Place** — education (preschool–high school, college/university), governance, military; also dance studios, martial arts academies, acting schools, sports academies, libraries
 - **Medical Center** — healthcare facilities (dentist, hospital, clinic)
 - **Spiritual Center** — religious / worship sites
 - **Residence** — houses, apartments, condos, townhouses
@@ -83,10 +109,22 @@ Submissions appear under **Working Taggers** in the results viewer.
 - **Commercial Services** — non-retail business services: printing shops, photo/art studios, repair services, consulting, catering, logistics
 - **Manufacture / Factory**
 - **Pharmacy** — flag and leave comment "pharmacy"
-- **Permanently or temporarily closed locations**
-- **Vehicles as locations** — boat, bus, ship, van
+- **Vehicles as locations** — boat, bus, ship, van (unless a fixed tour/transport operator serving as a real point of interest — e.g. a ferry terminal, marina, or dock-based boat tour)
+- **Youth organization, senior citizen center, community center, non-profit org** — flag
+- **Food truck** — flag, unless no other photo exists for that location at all
+- **Music school / music studio / recording studio** — flag
 
-When unsure, flag it and leave a comment explaining why.
+### Categories we DO want (not flag categories)
+
+- **Art gallery / art center** — public-facing gallery is in scope; a
+  private "art studio" / "design studio" is commercial and still flagged
+- **Festival** — in scope even if it looks like a neighborhood/city-block photo
+- **Video gaming cafe, airport, car racing stadium, comedy venue**
+- **Club** — not adult unless nudity/sex is sold on-site
+
+When unsure whether something is a genuine attraction, flag it and leave a
+comment explaining the uncertainty — admin will review. It's better to
+flag and explain than to guess.
 
 ---
 

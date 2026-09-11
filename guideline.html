@@ -252,26 +252,52 @@
     </div>
   </div>
 
-  <!-- ─── SLIDE 6: Flag ────────────────────────────────────────────── -->
+  <!-- ─── SLIDE 6: Flag — The Real Test ────────────────────────────── -->
   <div class="slide flex-col gap-6 py-8" data-slide="6">
     <div>
-      <p class="text-xs text-slate-400 font-semibold uppercase tracking-widest mb-1">Case 5</p>
+      <p class="text-xs text-red-400 font-semibold uppercase tracking-widest mb-1">Case 5 · Flagging Guidelines (1 of 2)</p>
       <div class="flex items-center gap-3">
         <h2 class="text-2xl font-bold text-white">Flag</h2>
         <span class="tag-badge tag-flagged">Flag</span>
       </div>
       <p class="text-slate-300 mt-1">The location is a <span class="font-semibold text-white">skip category</span> — we don't process these types of places.</p>
     </div>
+    <div class="bg-blue-950 border border-blue-800 rounded-xl p-5 space-y-2">
+      <p class="text-xs text-blue-300 uppercase tracking-wide font-semibold">The real test</p>
+      <p class="text-sm text-slate-200">We supply POI imagery to a client. "Flag" means <span class="font-semibold text-white">don't deliver this place</span> — the category list on the next page is a default heuristic for "generic, not a destination," not an absolute ban.</p>
+      <p class="text-sm text-slate-200">Ask: <span class="font-semibold text-white">is this specific place an attraction/landmark someone would recognize or seek out</span> — regardless of category?</p>
+      <p class="text-sm text-slate-300">Example: a strip-mall slot-machine hall → Flag. ARIA Resort &amp; Casino → do NOT flag, even though "casino" is a flag category — it's a recognizable resort/landmark. Same logic covers Arlington National Cemetery, the Texas Capitol, St. Patrick's Cathedral, and iconic convention centers.</p>
+    </div>
+    <div class="bg-amber-950 border border-amber-700 rounded-xl p-5 space-y-1">
+      <p class="text-xs text-amber-300 uppercase tracking-wide font-semibold">Two exceptions that always win</p>
+      <p class="text-sm text-amber-200">Regardless of attraction status:</p>
+      <ul class="text-sm text-amber-200 list-disc list-inside space-y-1">
+        <li>Never flag a <span class="font-semibold">chain location</span> for a category reason — chains are always in scope.</li>
+        <li>Always flag a <span class="font-semibold">closed location</span> — even a famous one that has since shut down.</li>
+      </ul>
+    </div>
+    <div class="flex justify-end">
+      <button class="btn-next" onclick="nextSlide()">Next: Flag Categories →</button>
+    </div>
+  </div>
+
+  <!-- ─── SLIDE 7: Flag Categories ─────────────────────────────────── -->
+  <div class="slide flex-col gap-6 py-8" data-slide="7">
+    <div>
+      <p class="text-xs text-red-400 font-semibold uppercase tracking-widest mb-1">Case 5 · Flagging Guidelines (2 of 2)</p>
+      <h2 class="text-2xl font-bold text-white">Flag Categories</h2>
+      <p class="text-slate-300 mt-1">Apply the real test from the previous page — these lists are the default, not the final word.</p>
+    </div>
     <div class="bg-slate-800 border border-slate-700 rounded-xl p-5">
-      <p class="text-xs text-slate-400 uppercase tracking-wide font-semibold mb-3">Flag these location types</p>
+      <p class="text-xs text-slate-400 uppercase tracking-wide font-semibold mb-3">Flag these location types (default — override if it's a genuine attraction)</p>
       <div class="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
         <div><span class="text-white font-medium">Cemetery</span> <span class="text-slate-400">— memorial / burial ground</span></div>
         <div><span class="text-white font-medium">City Block</span> <span class="text-slate-400">— apartment / office blocks</span></div>
         <div><span class="text-white font-medium">Cadastral</span> <span class="text-slate-400">— land surveying / mapping</span></div>
-        <div><span class="text-white font-medium">Adult Entertainment</span> <span class="text-slate-400">— clubs, gambling</span></div>
+        <div><span class="text-white font-medium">Adult Entertainment</span> <span class="text-slate-400">— clubs, gambling (not LGBTQ+ clubs unless nudity/sex sold on-site)</span></div>
         <div><span class="text-white font-medium">Event Spaces</span> <span class="text-slate-400">— banquet halls, convention centers</span></div>
         <div><span class="text-white font-medium">Lottery Booth</span> <span class="text-slate-400">— retail / gaming</span></div>
-        <div class="col-span-2"><span class="text-white font-medium">Professional Place</span> <span class="text-slate-400">— schools (K-12), government, military, dance/martial arts/acting studios, libraries</span></div>
+        <div class="col-span-2"><span class="text-white font-medium">Professional Place</span> <span class="text-slate-400">— schools (K-12, college/university), government, military, dance/martial arts/acting studios, libraries</span></div>
         <div><span class="text-white font-medium">Medical Center</span> <span class="text-slate-400">— dentist, hospital, clinic</span></div>
         <div><span class="text-white font-medium">Spiritual Center</span> <span class="text-slate-400">— religious / worship</span></div>
         <div><span class="text-white font-medium">Residence</span> <span class="text-slate-400">— houses, condos, apartments</span></div>
@@ -281,8 +307,22 @@
         <div class="col-span-2"><span class="text-white font-medium">Commercial Services</span> <span class="text-slate-400">— printing, repair, consulting, catering, logistics, studios</span></div>
         <div><span class="text-white font-medium">Manufacture / Factory</span></div>
         <div><span class="text-white font-medium">Pharmacy</span> <span class="text-slate-400">— flag + comment "pharmacy"</span></div>
-        <div class="col-span-2"><span class="text-white font-medium">Closed locations</span> <span class="text-slate-400">— permanently or temporarily closed</span></div>
-        <div><span class="text-white font-medium">Vehicles as locations</span> <span class="text-slate-400">— boat, bus, van, ship</span></div>
+        <div><span class="text-white font-medium">Vehicles as locations</span> <span class="text-slate-400">— boat, bus, van, ship (unless a fixed tour/ferry/marina point of interest)</span></div>
+        <div><span class="text-white font-medium">Youth org / senior center</span> <span class="text-slate-400">— community center, non-profit</span></div>
+        <div><span class="text-white font-medium">Food truck</span> <span class="text-slate-400">— unless no other photo exists</span></div>
+        <div><span class="text-white font-medium">Music/recording studio</span> <span class="text-slate-400">— incl. music school</span></div>
+      </div>
+    </div>
+    <div class="bg-slate-800 border border-slate-700 rounded-xl p-5">
+      <p class="text-xs text-slate-400 uppercase tracking-wide font-semibold mb-3">Do NOT flag these (previously miscategorized)</p>
+      <div class="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+        <div class="col-span-2"><span class="text-white font-medium">Art gallery / art center</span> <span class="text-slate-400">— public-facing gallery is in scope; a private "art studio"/"design studio" is still commercial and flagged</span></div>
+        <div><span class="text-white font-medium">Festival</span> <span class="text-slate-400">— even if it looks like a city block</span></div>
+        <div><span class="text-white font-medium">Video gaming cafe</span></div>
+        <div><span class="text-white font-medium">Airport</span></div>
+        <div><span class="text-white font-medium">Car racing stadium</span></div>
+        <div><span class="text-white font-medium">Comedy venue</span></div>
+        <div class="col-span-2"><span class="text-white font-medium">Club</span> <span class="text-slate-400">— not adult unless nudity/sex sold on-site</span></div>
       </div>
     </div>
     <div class="bg-amber-950 border border-amber-700 rounded-lg px-4 py-3 text-sm text-amber-200">
@@ -293,8 +333,8 @@
     </div>
   </div>
 
-  <!-- ─── SLIDE 7: Quiz ────────────────────────────────────────────── -->
-  <div class="slide flex-col gap-8 py-8" data-slide="7">
+  <!-- ─── SLIDE 8: Quiz ────────────────────────────────────────────── -->
+  <div class="slide flex-col gap-8 py-8" data-slide="8">
     <div>
       <p class="text-xs text-blue-400 font-semibold uppercase tracking-widest mb-1">Quick check</p>
       <h2 class="text-2xl font-bold text-white">Let's make sure you've got it</h2>
@@ -395,8 +435,8 @@
     </div>
   </div>
 
-  <!-- ─── SLIDE 8: Done ────────────────────────────────────────────── -->
-  <div class="slide flex-col items-center justify-center min-h-[70vh] text-center gap-6" data-slide="8">
+  <!-- ─── SLIDE 9: Done ────────────────────────────────────────────── -->
+  <div class="slide flex-col items-center justify-center min-h-[70vh] text-center gap-6" data-slide="9">
     <div class="text-5xl">✓</div>
     <div class="space-y-2">
       <h2 class="text-2xl font-bold text-white">You're ready to start</h2>
@@ -415,7 +455,7 @@
 </div>
 
 <script>
-const TOTAL_SLIDES = 9; // 0-8
+const TOTAL_SLIDES = 10; // 0-9
 let currentSlide = 0;
 const quizAnswers = [null, null, null, null, null, null, null]; // 7 questions
 const correctAnswers = [1, 2, 1, 3, 2, 2, 0];
@@ -465,7 +505,7 @@ function updateProgress() {
   label.textContent = `${displayN} / ${displaySlides}`;
   prevBtn.disabled = currentSlide === 0;
 
-  const hints = ['', 'Read carefully', '', '', '', '', '', 'Answer all 3 to continue', ''];
+  const hints = ['', 'Read carefully', '', '', '', '', '', '', 'Answer all 7 to continue', ''];
   hint.textContent = hints[currentSlide] || '';
 }
 
