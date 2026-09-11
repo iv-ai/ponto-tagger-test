@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ponto — Tagger Activity Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    body { font-family: 'Inter', system-ui, sans-serif; background: #f8fafc; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; border-radius: 0.375rem; font-size: 0.8rem; font-weight: 500; padding: 0.4rem 0.875rem; cursor: pointer; border: 1px solid transparent; transition: all 0.15s; gap: 0.375rem; }
+    .btn-outline { background: white; color: #1e293b; border-color: #e2e8f0; }
+    .btn-outline:hover { background: #f8fafc; }
+    .btn-primary { background: hsl(221,83%,53%); color: white; }
+    .btn-primary:hover { background: hsl(221,83%,45%); }
+
+    /* Status badges */
+    .badge { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 999px; white-space: nowrap; }
+    .badge-active    { background: #d1fae5; color: #065f46; }
+    .badge-new       { background: #ede9fe; color: #5b21b6; }
+    .badge-dormant   { background: #fef3c7; color: #92400e; }
+    .badge-not_started { background: #f1f5f9; color: #94a3b8; }
+    .dot-active      { background: #10b981; }
+    .dot-new         { background: #06b6d4; }
+    .dot-dormant     { background: #f97316; }
+    .dot-not_started { background: #cbd5e1; }
+
+    /* Row-level status coloring */
+    tr.row-low td       { background: #fff5f5; }
+    tr.row-low:hover td { background: #fee2e2; }
+    tr.row-low .name-cell { color: #b91c1c; }
+    tr.row-low .avg-cell  { color: #dc2626; font-weight: 700; }
+    tr.row-dormant td       { background: #fff7ed; }
+    tr.row-dormant:hover td { background: #ffedd5; }
+    tr.row-dormant .name-cell { color: #c2410c; }
+    tr.row-new td       { background: #ecfeff; }
+    tr.row-new:hover td { background: #cffafe; }
+    tr.row-new .name-cell { color: #0e7490; }
+
+    /* Role badges */
+    .role-qa     { background: #dbeafe; color: #1e40af; }
+    .role-input  { background: #dcfce7; color: #166534; }
+    .role-design { background: #f3e8ff; color: #6b21a8; }
+
+    /* Mini sparkline bars */
+    .spark-wrap { display: flex; align-items: flex-end; gap: 1px; height: 24px; }
+    .spark-bar { width: 5px; border-radius: 1px 1px 0 0; flex-shrink: 0; }
+    .spark-weekend { opacity: 0.35; }
+
+    /* Table */
+    table { border-collapse: collapse; width: 100%; }
+    th { text-align: left; font-size: 11px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.04em; padding: 8px 12px; border-bottom: 1px solid #e2e8f0; white-space: nowrap; }
+    td { padding: 10px 12px; border-bottom: 1px solid #f1f5f9; font-size: 13px; vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #f8fafc; }
+    .name-cell { font-weight: 500; color: #1e293b; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .num { text-align: right; font-variant-numeric: tabular-nums; }
+    .trend-up { color: #10b981; }
+    .trend-dn { color: #f43f5e; }
+    .trend-fl { color: #94a3b8; }
+
+    /* Summary cards */
+    .card { background: white; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px 20px; }
+
+    .section-head { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #94a3b8; display: flex; align-items: center; gap-8px; margin-bottom: 1px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+
+    /* Tooltip on hover */
+    .has-tip { position: relative; }
+    .tip { display: none; position: absolute; bottom: calc(100% + 4px); left: 50%; transform: translateX(-50%);
+      background: #1e293b; color: white; font-size: 11px; padding: 3px 8px; border-radius: 5px;
+      white-space: nowrap; pointer-events: none; z-index: 20; }
+    .has-tip:hover .tip { display: block; }
+
+    /* Day detail modal */
+    #modal-overlay { display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.5); z-index: 50; align-items: center; justify-content: center; }
+    #modal-overlay.open { display: flex; }
+    #modal-box { background: white; border-radius: 12px; padding: 24px; width: 520px; max-width: 95vw; max-height: 80vh; overflow-y: auto; }
+  </style>
+</head>
+<body>
+
+<div class="max-w-6xl mx-auto px-6 py-6 space-y-6">
+
+  <!-- Header -->
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-xl font-bold text-gray-900">Tagger Activity Dashboard</h1>
+      <p class="text-sm text-gray-500" id="subtitle">May 1–20, 2026 · Loading...</p>
+    </div>
+    <div class="flex gap-2 items-center">
+      <span class="text-xs text-gray-400" id="last-updated"></span>
+      <a href="admin.html" class="btn btn-outline">Admin</a>
+      <a href="results.html" class="btn btn-outline">Results</a>
+      <a href="index.html" class="btn btn-outline">Test Page</a>
+    </div>
+  </div>
+
+  <!-- Token input -->
+  <div class="card" id="token-card">
+    <div class="flex items-center gap-3 flex-wrap">
+      <div class="flex-1 min-w-0">
+        <label class="block text-xs font-600 text-gray-500 mb-1">Firebase Bearer Token <span class="text-gray-400 font-normal">(expires every hour — paste from Ponto UI DevTools → Network)</span></label>
+        <input type="password" id="token-input" placeholder="eyJhbGci..." class="w-full text-xs font-mono" style="border:1px solid #e2e8f0;border-radius:6px;padding:6px 10px;outline:none;" />
+      </div>
+      <button class="btn btn-primary mt-4" onclick="loadData()">Load Data</button>
+      <span id="token-status" class="text-xs"></span>
+    </div>
+  </div>
+
+  <!-- Summary cards -->
+  <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3" id="summary-cards" style="display:none!important"></div>
+
+  <!-- Main content -->
+  <div id="main-content" style="display:none">
+
+    <!-- Active -->
+    <div class="card space-y-3" id="section-active">
+      <div class="section-head"><span class="dot dot-active"></span>Active Taggers <span id="cnt-active" class="ml-1 text-gray-400"></span></div>
+      <table id="tbl-active"><thead><tr>
+        <th>Name</th><th>Role</th><th class="num">Avg/day</th><th>May 1–20 sparkline</th>
+        <th class="num">Last 5d avg</th><th class="num">Trend</th><th class="num">Total</th>
+      </tr></thead><tbody></tbody></table>
+    </div>
+
+    <!-- Ramping Up -->
+    <div class="card space-y-3 mt-4" id="section-new">
+      <div class="section-head"><span class="dot dot-new"></span>Ramping Up <span class="text-gray-400 font-normal text-xs ml-1">(started May 15+)</span> <span id="cnt-new" class="ml-1 text-gray-400"></span></div>
+      <table id="tbl-new"><thead><tr>
+        <th>Name</th><th>Role</th><th>Started</th><th>May 1–20 sparkline</th>
+        <th class="num">Today</th><th class="num">Total</th>
+      </tr></thead><tbody></tbody></table>
+    </div>
+
+    <!-- Dormant -->
+    <div class="card space-y-3 mt-4" id="section-dormant">
+      <div class="section-head"><span class="dot dot-dormant"></span>Dormant <span class="text-gray-400 font-normal text-xs ml-1">(went silent)</span> <span id="cnt-dormant" class="ml-1 text-gray-400"></span></div>
+      <table id="tbl-dormant"><thead><tr>
+        <th>Name</th><th>Role</th><th>Last active</th><th>May 1–20 sparkline</th>
+        <th class="num">Days silent</th><th class="num">Total</th>
+      </tr></thead><tbody></tbody></table>
+    </div>
+
+    <!-- Not started -->
+    <div class="card space-y-3 mt-4" id="section-not">
+      <div class="section-head"><span class="dot dot-not_started"></span>Not Started <span id="cnt-not" class="ml-1 text-gray-400"></span></div>
+      <div id="not-started-grid" class="flex flex-wrap gap-2 pb-1"></div>
+    </div>
+
+    <!-- Team daily chart -->
+    <div class="card mt-4">
+      <div class="section-head mb-3">Team Daily Output — May 2026</div>
+      <div id="team-chart" class="flex items-end gap-1" style="height:120px"></div>
+      <div class="flex gap-1 mt-1" id="team-labels"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Modal -->
+<div id="modal-overlay" onclick="if(event.target===this)closeModal()">
+  <div id="modal-box">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="font-bold text-gray-900" id="modal-title"></h2>
+      <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 text-lg leading-none">✕</button>
+    </div>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<script>
+const BASE = "https://ponto-api-production-454568860704.us-west1.run.app";
+const SKIP = new Set(['designtest0526@gmail.com','tae@iv.ai','matt.m@iv.ai','max@iv.ai','maxivinz@gmail.com','ruth@iv.ai','sivia@iv.ai']);
+const ALL_DATES = Array.from({length:20}, (_,i) => `2026-05-${String(i+1).padStart(2,'0')}`);
+const DATE_LABELS = Array.from({length:20}, (_,i) => `${i+1}`);
+const WEEKENDS = new Set([1,2,8,9,16,17]); // 0-indexed
+const ROLE_MAP = {qaTagger:'QA', inputTagger:'IN', designTagger:'DS', reviewsTagger:'RV'};
+const ROLE_CLASS = {qaTagger:'role-qa', inputTagger:'role-input', designTagger:'role-design', reviewsTagger:'role-design'};
+
+let ALL_RESULTS = [];
+
+async function fetchJSON(url, token) {
+  const r = await fetch(url, {headers:{Authorization:`Bearer ${token}`}});
+  if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
+  return r.json();
+}
+
+async function loadData() {
+  const token = document.getElementById('token-input').value.trim();
+  if (!token) return;
+  const status = document.getElementById('token-status');
+  status.textContent = 'Loading…';
+  status.className = 'text-xs text-blue-500';
+
+  try {
+    const people = await fetchJSON(`${BASE}/people`, token);
+    const list = Array.isArray(people) ? people : people.data || [];
+
+    const taggers = list.filter(p => {
+      if (SKIP.has(p.id)) return false;
+      return p.roles?.some(r => [1,2,3,4].includes(r.id ?? r.roleId));
+    }).map(p => {
+      const roleNames = p.roles.filter(r => [1,2,3,4].includes(r.id ?? r.roleId)).map(r => r.name ?? r.roleName ?? '');
+      const primary = ['qaTagger','inputTagger','designTagger','reviewsTagger'].find(n => roleNames.includes(n)) ?? roleNames[0] ?? '?';
+      return {email: p.id, name: p.name ?? p.id, role: primary};
+    });
+
+    status.textContent = `Fetching ${taggers.length} taggers…`;
+
+    const results = await Promise.all(taggers.map(async t => {
+      try {
+        const data = await fetchJSON(`${BASE}/people/${encodeURIComponent(t.email)}/stats`, token);
+        const combined = {};
+        for (const d of data.dailyBreakdown ?? []) {
+          if (d.date >= '2026-05-01' && d.date <= '2026-05-20') combined[d.date] = d.count ?? 0;
+        }
+        const daily = ALL_DATES.map(d => combined[d] ?? 0);
+        const total = daily.reduce((s,v)=>s+v,0);
+        const activeDays = daily.map((v,i) => v > 0 && !WEEKENDS.has(i) ? v : null).filter(v=>v!==null);
+        const avg = activeDays.length ? Math.round(activeDays.reduce((s,v)=>s+v,0)/activeDays.length) : 0;
+        const firstIdx = daily.findIndex(v=>v>0);
+        const lastIdx = [...daily].reverse().findIndex(v=>v>0);
+        const last5 = daily.slice(-5).filter(v=>v>0);
+        const last5avg = last5.length ? Math.round(last5.reduce((s,v)=>s+v,0)/last5.length) : 0;
+        const first5active = daily.slice(0,10).filter((v,i)=>v>0&&!WEEKENDS.has(i));
+        const first5avg = first5active.length ? Math.round(first5active.reduce((s,v)=>s+v,0)/first5active.length) : 0;
+
+        let status;
+        const daysSinceLast = lastIdx === -1 ? 999 : lastIdx; // reverse idx = days from end
+        if (total === 0) status = 'not_started';
+        else if (firstIdx >= 14) status = 'new'; // started May 15+
+        else if (daysSinceLast >= 5 && lastIdx !== -1 && 19 - (daily.length - 1 - [...daily].reverse().findIndex(v=>v>0)) < 15) status = 'dormant';
+        else status = 'active';
+
+        // Recalculate last active date properly
+        let lastActive = null;
+        for (let i = daily.length-1; i >= 0; i--) { if (daily[i] > 0) { lastActive = ALL_DATES[i]; break; } }
+        let firstActive = null;
+        for (let i = 0; i < daily.length; i++) { if (daily[i] > 0) { firstActive = ALL_DATES[i]; break; } }
+        const daysSilent = lastActive ? Math.floor((new Date('2026-05-20') - new Date(lastActive)) / 86400000) : null;
+
+        if (total === 0) status = 'not_started';
+        else if (firstActive >= '2026-05-15') status = 'new';
+        else if (daysSilent >= 5) status = 'dormant';
+        else status = 'active';
+
+        return {...t, daily, total, avg, last5avg, first5avg, firstActive, lastActive, daysSilent, status};
+      } catch {
+        return {...t, daily: new Array(20).fill(0), total:0, avg:0, last5avg:0, first5avg:0, firstActive:null, lastActive:null, daysSilent:null, status:'not_started'};
+      }
+    }));
+
+    ALL_RESULTS = results;
+    status.textContent = `✓ Loaded ${taggers.length} taggers`;
+    status.className = 'text-xs text-green-600';
+    document.getElementById('last-updated').textContent = `Updated ${new Date().toLocaleTimeString()}`;
+    render(results);
+  } catch(e) {
+    status.textContent = `Error: ${e.message}`;
+    status.className = 'text-xs text-red-500';
+  }
+}
+
+function sparkline(daily, status, height=24, barW=5, isLow=false) {
+  const max = Math.max(...daily, 1);
+  const colorMap = {active: isLow ? '#f87171' : '#3b82f6', new:'#06b6d4', dormant:'#f97316', not_started:'#cbd5e1'};
+  const color = colorMap[status] ?? '#3b82f6';
+  return `<div class="spark-wrap" style="height:${height}px">` +
+    daily.map((v, i) => {
+      const h = Math.max(v > 0 ? 2 : 0, Math.round((v/max)*height));
+      const wknd = WEEKENDS.has(i) ? ' spark-weekend' : '';
+      return `<div class="has-tip"><div class="spark-bar${wknd}" style="height:${h}px;background:${color};width:${barW}px"></div><span class="tip">${DATE_LABELS[i]}: ${v.toLocaleString()}</span></div>`;
+    }).join('') + '</div>';
+}
+
+function roleTag(role) {
+  return `<span class="badge ${ROLE_CLASS[role] || 'role-design'}" style="font-size:10px;padding:1px 6px">${ROLE_MAP[role]||role}</span>`;
+}
+
+function trendIcon(last5, first5) {
+  if (!first5 || !last5) return '<span class="trend-fl">—</span>';
+  const ratio = last5 / first5;
+  if (ratio > 1.15) return `<span class="trend-up">↑ ${Math.round((ratio-1)*100)}%</span>`;
+  if (ratio < 0.85) return `<span class="trend-dn">↓ ${Math.round((1-ratio)*100)}%</span>`;
+  return `<span class="trend-fl">→ flat</span>`;
+}
+
+function render(results) {
+  const byStatus = {active:[], new:[], dormant:[], not_started:[]};
+  results.forEach(r => byStatus[r.status]?.push(r));
+  Object.values(byStatus).forEach(arr => arr.sort((a,b)=>b.total-a.total));
+
+  // Summary cards
+  const cards = document.getElementById('summary-cards');
+  const grandTotal = results.reduce((s,r)=>s+r.total,0);
+  const todayTotal = results.reduce((s,r)=>s+(r.daily[19]||0),0);
+  cards.innerHTML = [
+    {label:'Active', val: byStatus.active.length, cls:'text-blue-600'},
+    {label:'Low (<300/day)', val: byStatus.active.filter(r=>r.avg<300).length, cls:'text-red-500'},
+    {label:'Ramping up', val: byStatus.new.length, cls:'text-cyan-500'},
+    {label:'Dormant', val: byStatus.dormant.length, cls:'text-orange-500'},
+    {label:'Not started', val: byStatus.not_started.length, cls:'text-gray-400'},
+    {label:'Total (May)', val: grandTotal.toLocaleString(), cls:'text-gray-900'},
+    {label:'Today (May 20)', val: todayTotal.toLocaleString(), cls:'text-gray-900'},
+  ].map(c => `<div class="card text-center"><div class="text-2xl font-bold ${c.cls}">${c.val}</div><div class="text-xs text-gray-400 mt-1">${c.label}</div></div>`).join('');
+  cards.style.display = '';
+
+  document.getElementById('subtitle').textContent = `May 1–20, 2026 · ${results.length} taggers`;
+  document.getElementById('main-content').style.display = '';
+
+  // Active table
+  document.getElementById('cnt-active').textContent = `(${byStatus.active.length})`;
+  const tblActive = document.getElementById('tbl-active').querySelector('tbody');
+  tblActive.innerHTML = byStatus.active.map(r => {
+    const isLow = r.avg < 300;
+    const rowCls = isLow ? 'row-low' : '';
+    const avgCls = isLow ? 'num avg-cell' : 'num text-gray-700';
+    const avgFlag = isLow ? ' ⚠' : '';
+    return `<tr class="${rowCls}">
+    <td class="name-cell" title="${r.email}">${r.name}</td>
+    <td>${roleTag(r.role)}</td>
+    <td class="${avgCls}">${r.avg.toLocaleString()}${avgFlag}</td>
+    <td>${sparkline(r.daily, 'active', 24, 5, isLow)}</td>
+    <td class="num text-gray-700">${r.last5avg.toLocaleString()}</td>
+    <td class="num text-sm">${trendIcon(r.last5avg, r.first5avg)}</td>
+    <td class="num font-semibold text-gray-900">${r.total.toLocaleString()}</td>
+  </tr>`;
+  }).join('');
+
+  // New table
+  document.getElementById('cnt-new').textContent = `(${byStatus.new.length})`;
+  const tblNew = document.getElementById('tbl-new').querySelector('tbody');
+  tblNew.innerHTML = byStatus.new.map(r => `<tr class="row-new">
+    <td class="name-cell" title="${r.email}">${r.name}</td>
+    <td>${roleTag(r.role)}</td>
+    <td class="text-cyan-600 text-xs font-medium">${r.firstActive ? r.firstActive.slice(5) : '—'}</td>
+    <td>${sparkline(r.daily, 'new')}</td>
+    <td class="num text-gray-700">${(r.daily[19]||0).toLocaleString()}</td>
+    <td class="num font-semibold text-gray-900">${r.total.toLocaleString()}</td>
+  </tr>`).join('');
+
+  // Dormant table
+  document.getElementById('cnt-dormant').textContent = `(${byStatus.dormant.length})`;
+  const tblDormant = document.getElementById('tbl-dormant').querySelector('tbody');
+  tblDormant.innerHTML = byStatus.dormant.map(r => `<tr class="row-dormant">
+    <td class="name-cell" title="${r.email}">${r.name}</td>
+    <td>${roleTag(r.role)}</td>
+    <td class="text-orange-500 text-xs font-medium">${r.lastActive ? r.lastActive.slice(5) : '—'}</td>
+    <td>${sparkline(r.daily, 'dormant')}</td>
+    <td class="num text-amber-600 font-medium">${r.daysSilent ?? '—'}d</td>
+    <td class="num font-semibold text-gray-900">${r.total.toLocaleString()}</td>
+  </tr>`).join('');
+
+  // Not started grid
+  document.getElementById('cnt-not').textContent = `(${byStatus.not_started.length})`;
+  document.getElementById('not-started-grid').innerHTML = byStatus.not_started.map(r =>
+    `<div class="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-500">
+      ${roleTag(r.role)}
+      <span class="font-medium text-gray-600">${r.name}</span>
+    </div>`
+  ).join('');
+
+  // Team daily chart
+  const teamDaily = ALL_DATES.map((_,i) => results.reduce((s,r)=>s+(r.daily[i]||0),0));
+  const maxDay = Math.max(...teamDaily, 1);
+  const chartH = 100;
+  document.getElementById('team-chart').innerHTML = teamDaily.map((v, i) => {
+    const h = Math.max(v>0?2:0, Math.round((v/maxDay)*chartH));
+    const wknd = WEEKENDS.has(i);
+    return `<div class="has-tip flex flex-col items-center" style="flex:1">
+      <div class="w-full rounded-t" style="height:${h}px;background:${wknd?'#bfdbfe':'#3b82f6'};min-height:${v>0?2:0}px"></div>
+      <span class="tip">${DATE_LABELS[i]}: ${v.toLocaleString()}</span>
+    </div>`;
+  }).join('');
+  document.getElementById('team-labels').innerHTML = teamDaily.map((_,i) =>
+    `<div style="flex:1;text-align:center;font-size:9px;color:${WEEKENDS.has(i)?'#94a3b8':'#64748b'}">${DATE_LABELS[i]}</div>`
+  ).join('');
+}
+
+function closeModal() { document.getElementById('modal-overlay').classList.remove('open'); }
+
+// Auto-load if token was previously saved
+const savedToken = sessionStorage.getItem('pontoToken');
+if (savedToken) {
+  document.getElementById('token-input').value = savedToken;
+}
+document.getElementById('token-input').addEventListener('change', e => {
+  sessionStorage.setItem('pontoToken', e.target.value);
+});
+</script>
+</body>
+</html>
